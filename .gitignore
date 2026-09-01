@@ -3,6 +3,7 @@
 venv/
 !.env.example
 *.db
+*.db-*
 __pycache__/
 *.py[cod]
 .venv/
