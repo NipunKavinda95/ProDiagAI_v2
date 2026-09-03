@@ -19,7 +19,7 @@ type MachineData = {
   rpm: number;
   status: string;
   health_score: number;
-  health_status: "HEALTHY" | "WARNING" | "CRITICAL";
+  health_status: "HEALTHY" | "DEGRADING" | "WARNING" | "CRITICAL";
   risk_reasons: string[];
 };
 
@@ -46,13 +46,12 @@ type HistoryResponse = {
 };
 
 type Diagnosis = {
-  fault_type: string;
-  severity: "HEALTHY" | "WARNING" | "CRITICAL";
+  condition: "HEALTHY" | "DEGRADING" | "WARNING" | "CRITICAL";
+  probable_fault: string;
   confidence: number;
-  summary: string;
   recommended_actions: string[];
   estimated_time_to_failure: string;
-  escalation_required: boolean;
+  requires_escalation: boolean;
 };
 
 type DiagnosisResponse = {
@@ -180,6 +179,10 @@ function App() {
     (machine) => machine.health_status === "WARNING"
   ).length;
 
+  const degradingCount = machines.filter(
+    (machine) => machine.health_status === "DEGRADING"
+  ).length;
+
   const healthyCount = machines.filter(
     (machine) => machine.health_status === "HEALTHY"
   ).length;
@@ -202,10 +205,69 @@ function App() {
 
   return (
     <main>
-      <header className="app-header">
-        <p className="eyebrow">Live industrial intelligence</p>
-        <h1>ProDiag AI V2</h1>
-        <p>Predictive Maintenance Copilot</p>
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "24px",
+          marginBottom: "28px",
+          paddingBottom: "22px",
+          borderBottom: "1px solid #1d3b57",
+        }}
+      >
+        <div>
+          <img
+            src="/logo.png"
+            alt="ProDiag AI"
+            style={{
+              display: "block",
+              width: "min(520px, 100%)",
+              height: "auto",
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            textAlign: "right",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              color: "#7ee7c7",
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            <span
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "#35e29c",
+                boxShadow: "0 0 0 4px #35e29c24",
+              }}
+            />
+            System Online
+          </span>
+
+          <p
+            style={{
+              margin: "6px 0 0",
+              color: "#7895b0",
+              fontSize: "0.78rem",
+            }}
+          >
+            Industrial Asset Intelligence
+          </p>
+        </div>
       </header>
 
       <section className="fleet-overview">
@@ -217,6 +279,7 @@ function App() {
         <div className="fleet-counts">
           <span className="critical-count">{criticalCount} Critical</span>
           <span className="warning-count">{warningCount} Warning</span>
+          <span className="degrading-count">{degradingCount} Degrading</span>
           <span className="healthy-count">{healthyCount} Healthy</span>
         </div>
       </section>
@@ -295,17 +358,20 @@ function App() {
 
         <article className="panel diagnosis-panel">
           <p className="eyebrow">AI fault diagnosis</p>
-          <h2>{diagnosis?.fault_type ?? "Analyzing machine condition..."}</h2>
+          <h2>{diagnosis?.probable_fault ?? "Analyzing machine condition..."}</h2>
 
           {diagnosis && (
             <>
-              <p className={`severity ${diagnosis.severity.toLowerCase()}`}>
-                {diagnosis.severity} · {Math.round(diagnosis.confidence * 100)}% confidence
+              <p className={`severity ${diagnosis.condition.toLowerCase()}`}>
+                {diagnosis.condition} · {Math.round(diagnosis.confidence * 100)}% confidence
               </p>
 
-              <p className="diagnosis-summary">{diagnosis.summary}</p>
+              <p className="diagnosis-summary">
+                AI detected: {diagnosis.probable_fault}
+              </p>
 
               <p className="eyebrow diagnosis-label">Recommended action</p>
+
               <ul className="risk-list">
                 {diagnosis.recommended_actions.slice(0, 2).map((action) => (
                   <li key={action}>{action}</li>
@@ -316,7 +382,7 @@ function App() {
                 Estimated time to failure: {diagnosis.estimated_time_to_failure}
               </p>
 
-              {diagnosis.escalation_required && (
+              {diagnosis.requires_escalation && (
                 <p className="escalation-note">
                   Escalation recommended: involve a maintenance specialist or OEM.
                 </p>

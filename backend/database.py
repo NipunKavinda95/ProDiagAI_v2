@@ -1,13 +1,33 @@
 from pathlib import Path
 
-from sqlalchemy import DateTime, Float, Integer, String, create_engine
+from sqlalchemy import event
+from sqlalchemy import Float, Integer, String, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE_URL = f"sqlite:///{BASE_DIR / 'prodiag.db'}"
 
-engine = create_engine(DATABASE_URL)
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={
+        "check_same_thread": False,
+        "timeout": 30
+    }
+)
+
+
+@event.listens_for(engine, "connect")
+def configure_sqlite(connection, record):
+    cursor = connection.cursor()
+
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=30000")
+
+    cursor.close()
+
+
 SessionLocal = sessionmaker(bind=engine)
 
 

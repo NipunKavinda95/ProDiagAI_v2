@@ -500,3 +500,29 @@ h2 {
   background: #70521a40;
   border-left-color: #e7b54c;
 }
+.degrading-count {
+  color: #9fd3ff;
+  background: #24547a40;
+}
+.machine-card.degrading {
+  border-top: 3px solid #58b8ff;
+}
+
+.machine-card.degrading .machine-card-top strong,
+.machine-card.degrading p {
+  color: #9fd3ff;
+}
+.health-badge.degrading {
+  color: #9fd3ff;
+  background: #24547a40;
+  border: 1px solid #3979a8;
+}
+.severity.degrading {
+  color: #9fd3ff;
+  background: #24547a40;
+}
+.severity.degrading ~ .risk-list li {
+  color: #b9dcf7;
+  background: #173a5638;
+  border-left-color: #58b8ff;
+}
