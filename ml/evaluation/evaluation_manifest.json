@@ -1,0 +1,52 @@
+{
+  "project": "ProDiag AI V2",
+  "package_type": "ML Evaluation Package",
+  "generated_at": "2026-09-05T18:15:29.178559",
+  "source_directory": "F:\\Software and AI Dev\\Gen AI and Agents\\AI Project\\ProdiagAI v2\\ml\\results",
+  "package_directory": "F:\\Software and AI Dev\\Gen AI and Agents\\AI Project\\ProdiagAI v2\\ml\\evaluation",
+  "structure": {
+    "figures": [
+      "confusion_matrices.png",
+      "health_score_best_model_error.png",
+      "health_score_mae_comparison.png",
+      "health_score_predicted_vs_actual.png",
+      "health_score_r2_comparison.png",
+      "health_score_residual_distribution.png",
+      "health_score_rmse_comparison.png",
+      "model_comparison.png",
+      "precision_recall_comparison.png",
+      "roc_curve_comparison.png",
+      "xgboost_feature_importance.png",
+      "xgboost_shap_importance.png",
+      "xgboost_shap_summary.png",
+      "xgboost_threshold_analysis.png"
+    ],
+    "data": [
+      "detailed_model_evaluation.csv",
+      "evaluation_summary.json",
+      "health_score_detailed_evaluation.csv",
+      "health_score_detailed_evaluation.json",
+      "health_score_experiment_summary.json",
+      "health_score_model_comparison.csv",
+      "health_score_predictions.csv",
+      "ml_experiment_summary.json",
+      "model_comparison.csv",
+      "xgboost_feature_importance.csv",
+      "xgboost_shap_importance.csv",
+      "xgboost_threshold_analysis.csv"
+    ],
+    "reports": [
+      "logistic_regression_classification_report.txt",
+      "random_forest_classification_report.txt",
+      "xgboost_classification_report.txt",
+      "xgboost_error_analysis.txt",
+      "xgboost_shap_top_features.txt"
+    ],
+    "pdf": "ProDiag_AI_V2_ML_Evaluation_Report.pdf"
+  },
+  "counts": {
+    "figures": 14,
+    "data_files": 12,
+    "reports": 5
+  }
+}

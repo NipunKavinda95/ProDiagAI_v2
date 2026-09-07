@@ -1,0 +1,76 @@
+{
+    "evaluation_type": "time_based_test_evaluation",
+    "target": "failure_within_1h",
+    "selection_metric": "f1",
+    "best_model": "XGBoost",
+    "best_model_metrics": {
+        "model": "XGBoost",
+        "accuracy": 0.9968333333333333,
+        "precision": 0.9896249002394254,
+        "recall": 0.9951845906902087,
+        "f1": 0.9923969587835134,
+        "roc_auc": 0.9998879038079617,
+        "pr_auc": 0.9995541376071655
+    },
+    "model_results": [
+        {
+            "model": "XGBoost",
+            "accuracy": 0.9968333333333333,
+            "precision": 0.9896249002394254,
+            "recall": 0.9951845906902087,
+            "f1": 0.9923969587835134,
+            "roc_auc": 0.9998879038079617,
+            "pr_auc": 0.9995541376071655
+        },
+        {
+            "model": "Random Forest",
+            "accuracy": 0.9966666666666667,
+            "precision": 0.9842022116903634,
+            "recall": 1.0,
+            "f1": 0.9920382165605095,
+            "roc_auc": 1.0,
+            "pr_auc": 1.0
+        },
+        {
+            "model": "Logistic Regression",
+            "accuracy": 0.9818333333333333,
+            "precision": 0.9991220368744512,
+            "recall": 0.913322632423756,
+            "f1": 0.9542976939203355,
+            "roc_auc": 0.9997726000441632,
+            "pr_auc": 0.9991101778909948
+        }
+    ],
+    "confusion_matrices": {
+        "Logistic Regression": [
+            [
+                4753,
+                1
+            ],
+            [
+                108,
+                1138
+            ]
+        ],
+        "Random Forest": [
+            [
+                4734,
+                20
+            ],
+            [
+                0,
+                1246
+            ]
+        ],
+        "XGBoost": [
+            [
+                4741,
+                13
+            ],
+            [
+                6,
+                1240
+            ]
+        ]
+    }
+}

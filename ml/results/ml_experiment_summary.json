@@ -1,0 +1,106 @@
+{
+    "dataset": "ProDiag_AI_V2_synthetic_predictive_maintenance_dataset.csv",
+    "target": "failure_within_1h",
+    "features": [
+        "temperature_c",
+        "vibration_mm_s",
+        "current_a",
+        "rpm",
+        "load_factor",
+        "temperature_c_delta",
+        "vibration_mm_s_delta",
+        "current_a_delta",
+        "rpm_delta",
+        "temperature_c_rolling_mean_10",
+        "vibration_mm_s_rolling_mean_10",
+        "current_a_rolling_mean_10",
+        "rpm_rolling_mean_10",
+        "equipment_type"
+    ],
+    "split_method": "time_based",
+    "test_ratio": 0.2,
+    "models_compared": [
+        "Logistic Regression",
+        "Random Forest",
+        "XGBoost"
+    ],
+    "selection_metric": "f1",
+    "best_model": "XGBoost",
+    "best_model_metrics": {
+        "model": "XGBoost",
+        "accuracy": 0.9968333333333333,
+        "precision": 0.9896249002394254,
+        "recall": 0.9951845906902087,
+        "f1": 0.9923969587835134,
+        "roc_auc": 0.9998879038079617,
+        "pr_auc": 0.9995541376071655
+    },
+    "all_results": {
+        "Logistic Regression": {
+            "metrics": {
+                "model": "Logistic Regression",
+                "accuracy": 0.9818333333333333,
+                "precision": 0.9991220368744512,
+                "recall": 0.913322632423756,
+                "f1": 0.9542976939203355,
+                "roc_auc": 0.9997726000441632,
+                "pr_auc": 0.9991101778909948
+            },
+            "confusion_matrix": [
+                [
+                    4753,
+                    1
+                ],
+                [
+                    108,
+                    1138
+                ]
+            ],
+            "classification_report": "              precision    recall  f1-score   support\n\n           0       0.98      1.00      0.99      4754\n           1       1.00      0.91      0.95      1246\n\n    accuracy                           0.98      6000\n   macro avg       0.99      0.96      0.97      6000\nweighted avg       0.98      0.98      0.98      6000\n"
+        },
+        "Random Forest": {
+            "metrics": {
+                "model": "Random Forest",
+                "accuracy": 0.9966666666666667,
+                "precision": 0.9842022116903634,
+                "recall": 1.0,
+                "f1": 0.9920382165605095,
+                "roc_auc": 1.0,
+                "pr_auc": 1.0
+            },
+            "confusion_matrix": [
+                [
+                    4734,
+                    20
+                ],
+                [
+                    0,
+                    1246
+                ]
+            ],
+            "classification_report": "              precision    recall  f1-score   support\n\n           0       1.00      1.00      1.00      4754\n           1       0.98      1.00      0.99      1246\n\n    accuracy                           1.00      6000\n   macro avg       0.99      1.00      0.99      6000\nweighted avg       1.00      1.00      1.00      6000\n"
+        },
+        "XGBoost": {
+            "metrics": {
+                "model": "XGBoost",
+                "accuracy": 0.9968333333333333,
+                "precision": 0.9896249002394254,
+                "recall": 0.9951845906902087,
+                "f1": 0.9923969587835134,
+                "roc_auc": 0.9998879038079617,
+                "pr_auc": 0.9995541376071655
+            },
+            "confusion_matrix": [
+                [
+                    4741,
+                    13
+                ],
+                [
+                    6,
+                    1240
+                ]
+            ],
+            "classification_report": "              precision    recall  f1-score   support\n\n           0       1.00      1.00      1.00      4754\n           1       0.99      1.00      0.99      1246\n\n    accuracy                           1.00      6000\n   macro avg       0.99      1.00      1.00      6000\nweighted avg       1.00      1.00      1.00      6000\n"
+        }
+    }
+}

@@ -1,0 +1,45 @@
+{
+    "experiment": "Health Score Regression",
+    "dataset": "ProDiag_AI_V2_synthetic_predictive_maintenance_dataset.csv",
+    "target": "health_score_target",
+    "target_range": "0-100",
+    "split_method": "time_based",
+    "test_ratio": 0.2,
+    "models_compared": [
+        "Linear Regression",
+        "Random Forest Regressor",
+        "XGBoost Regressor"
+    ],
+    "selection_criteria": [
+        "lowest MAE",
+        "lowest RMSE",
+        "highest R2"
+    ],
+    "best_model": "XGBoost Regressor",
+    "best_model_metrics": {
+        "model": "XGBoost Regressor",
+        "mae": 3.3621743475710226,
+        "rmse": 9.849237478819608,
+        "r2": 0.9268429532175736
+    },
+    "all_results": [
+        {
+            "model": "XGBoost Regressor",
+            "mae": 3.3621743475710226,
+            "rmse": 9.849237478819608,
+            "r2": 0.9268429532175736
+        },
+        {
+            "model": "Random Forest Regressor",
+            "mae": 3.4736377636960873,
+            "rmse": 9.126098882965389,
+            "r2": 0.9371910855082985
+        },
+        {
+            "model": "Linear Regression",
+            "mae": 4.973100214174816,
+            "rmse": 11.836663996818611,
+            "r2": 0.8943402480755722
+        }
+    ]
+}

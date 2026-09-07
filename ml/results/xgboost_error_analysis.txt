@@ -1,0 +1,13 @@
+PRODIAG AI V2 - XGBOOST ERROR ANALYSIS
+============================================================
+
+Best F1 threshold: 0.70
+
+Precision: 0.9952
+Recall: 0.9920
+F1: 0.9936
+
+True Negatives: 4748
+False Positives: 6
+False Negatives: 10
+True Positives: 1236

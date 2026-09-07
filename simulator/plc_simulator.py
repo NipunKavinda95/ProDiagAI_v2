@@ -124,6 +124,10 @@ def create_machine_state(machine):
 
         "repair_ticks": 0,
         "restart_ticks": 0,
+
+        # Previous sensor values are retained so telemetry changes
+        # gradually instead of jumping randomly every second.
+        "sensor_values": None,
     }
 
 
@@ -314,52 +318,69 @@ def generate_normal_reading(machine):
     )
 
     # --------------------------------------------------------
-    # Temperature
+    # Stable sensor baseline
     # --------------------------------------------------------
 
-    temperature_c = get_normal_value(
+    machine_id = machine["machine_id"]
+    state = machine_states[machine_id]
+
+    target_temperature = get_normal_value(
         normal_range,
         "temperature_c",
         default=45.0,
     )
 
-    # --------------------------------------------------------
-    # Vibration
-    # --------------------------------------------------------
-
-    vibration_mm_s = get_normal_value(
+    target_vibration = get_normal_value(
         normal_range,
         "vibration_mm_s",
         default=1.0,
     )
 
-    # --------------------------------------------------------
-    # RPM
-    # --------------------------------------------------------
+    if "current_a" in normal_range:
+        target_current = get_normal_value(
+            normal_range,
+            "current_a",
+            default=10.0,
+        )
+    else:
+        target_current = generate_default_current(machine)
 
-    rpm = get_normal_value(
+    target_rpm = get_normal_value(
         normal_range,
         "rpm",
         default=1500.0,
     )
 
-    # --------------------------------------------------------
-    # Current
-    # --------------------------------------------------------
+    previous = state.get("sensor_values")
 
-    if "current_a" in normal_range:
-
-        current_a = get_normal_value(
-            normal_range,
-            "current_a",
-            default=10.0,
-        )
-
+    if previous is None:
+        temperature_c = target_temperature
+        vibration_mm_s = target_vibration
+        current_a = target_current
+        rpm = target_rpm
     else:
+        temperature_c = previous["temperature_c"] + clamp(
+            target_temperature - previous["temperature_c"], -0.5, 0.5
+        ) + random.uniform(-0.08, 0.08)
 
-        current_a = generate_default_current(
-            machine
-        )
+        vibration_mm_s = previous["vibration_mm_s"] + clamp(
+            target_vibration - previous["vibration_mm_s"], -0.12, 0.12
+        ) + random.uniform(-0.03, 0.03)
+
+        current_a = previous["current_a"] + clamp(
+            target_current - previous["current_a"], -0.4, 0.4
+        ) + random.uniform(-0.08, 0.08)
+
+        rpm = previous["rpm"] + clamp(
+            target_rpm - previous["rpm"], -8.0, 8.0
+        ) + random.uniform(-2.0, 2.0)
+
+    state["sensor_values"] = {
+        "temperature_c": temperature_c,
+        "vibration_mm_s": vibration_mm_s,
+        "current_a": current_a,
+        "rpm": rpm,
+    }
 
     # --------------------------------------------------------
     # Build telemetry

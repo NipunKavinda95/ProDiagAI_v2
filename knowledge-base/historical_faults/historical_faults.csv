@@ -1,0 +1,11 @@
+event_id,machine_id,equipment_type,fault_type,condition,primary_symptoms,root_cause,action_taken,outcome
+HF-001,MTR-01,Motor,bearing_wear,CRITICAL,High vibration and increasing temperature,Bearing degradation,Bearing inspection and replacement,Restored
+HF-002,PMP-02,Pump,cavitation,WARNING,Increased vibration and unstable operation,Insufficient suction conditions,Suction system inspection,Restored
+HF-003,GBX-08,Gearbox,gear_wear,CRITICAL,Vibration and gearbox temperature increase,Gear tooth wear,Gearbox inspection and gear replacement,Restored
+HF-004,FAN-09,Fan,fan_imbalance,WARNING,Elevated vibration at operating speed,Uneven fan loading,Fan inspection and balancing,Restored
+HF-005,CNV-04,Conveyor,belt_misalignment,DEGRADING,Increasing vibration and belt wear,Pulley misalignment,Belt alignment and tension adjustment,Restored
+HF-006,CMP-03,Compressor,overload,CRITICAL,High current and reduced RPM,Excessive mechanical load,Load inspection and corrective maintenance,Restored
+HF-007,MTR-07,Motor,bearing_wear,WARNING,Temperature and vibration increase,Poor lubrication,Lubrication service and inspection,Restored
+HF-008,PMP-15,Pump,cavitation,CRITICAL,High vibration and unstable operation,Suction restriction,Suction line inspection and correction,Restored
+HF-009,FAN-14,Fan,fan_imbalance,WARNING,Increasing vibration,Blade imbalance,Blade inspection and balancing,Restored
+HF-010,GBX-11,Gearbox,gear_wear,WARNING,Increasing vibration and temperature,Lubrication degradation,Lubricant replacement and inspection,Restored

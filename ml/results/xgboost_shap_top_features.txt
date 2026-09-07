@@ -1,0 +1,18 @@
+PRODIAG AI V2 - SHAP TOP FEATURES
+============================================================
+
+ 1. numeric__vibration_mm_s_rolling_mean_10 - 40.90%
+ 2. numeric__temperature_c_rolling_mean_10 - 9.67%
+ 3. numeric__vibration_mm_s - 9.62%
+ 4. numeric__rpm - 8.06%
+ 5. numeric__temperature_c - 7.42%
+ 6. numeric__rpm_rolling_mean_10 - 5.67%
+ 7. numeric__current_a - 3.91%
+ 8. numeric__current_a_rolling_mean_10 - 3.30%
+ 9. numeric__load_factor - 3.12%
+10. categorical__equipment_type_gearbox - 2.54%
+11. numeric__rpm_delta - 1.71%
+12. numeric__vibration_mm_s_delta - 1.50%
+13. numeric__current_a_delta - 1.14%
+14. numeric__temperature_c_delta - 0.84%
+15. categorical__equipment_type_motor - 0.23%

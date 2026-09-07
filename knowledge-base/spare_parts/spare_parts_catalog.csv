@@ -1,0 +1,15 @@
+part_id,part_name,equipment_type,fault_type,description,estimated_cost_usd,lead_time_days,criticality
+BRG-6205,Deep Groove Bearing 6205,Motor,bearing_wear,Replacement motor bearing,35,3,High
+BRG-6306,Deep Groove Bearing 6306,Pump,bearing_wear,Replacement pump bearing,48,4,High
+BRG-6206,Deep Groove Bearing 6206,Fan,bearing_wear,Replacement fan bearing,40,3,Medium
+LUB-001,Industrial Bearing Lubricant,Motor,bearing_wear,Industrial lubricant for bearing maintenance,25,2,Medium
+LUB-002,High Temperature Grease,Pump,bearing_wear,High temperature maintenance grease,32,2,Medium
+BELT-A42,A42 Drive Belt,Conveyor,belt_misalignment,Replacement drive belt,55,4,High
+BELT-B52,B52 Drive Belt,Fan,belt_misalignment,Replacement fan drive belt,62,4,Medium
+GBG-001,Industrial Gear Oil,Gearbox,gear_wear,Replacement gearbox lubricant,75,3,High
+GEAR-001,Replacement Gear Set,Gearbox,gear_wear,Simulated gearbox replacement gear set,420,14,High
+IMP-001,Pump Impeller,Pump,cavitation,Replacement pump impeller,280,10,High
+BLD-001,Fan Blade Set,Fan,fan_imbalance,Replacement balanced fan blade set,190,8,Medium
+COUP-001,Flexible Coupling,Motor,overload,Replacement flexible shaft coupling,145,7,High
+SNS-VIB-001,Vibration Sensor,All,sensor_failure,Industrial vibration sensor replacement,120,5,High
+SNS-TEMP-001,Temperature Sensor,All,sensor_failure,Industrial temperature sensor replacement,65,4,Medium

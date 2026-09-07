@@ -22,18 +22,23 @@ body {
   min-height: 100vh;
 }
 
+/* =========================
+   GLOBAL LAYOUT
+========================= */
+
 main {
   width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
   padding: 46px 0 70px;
 }
 
-.app-header {
-  margin-bottom: 28px;
+main > header {
+  margin-bottom: 16px !important;
 }
 
 h1,
 h2,
+h3,
 p {
   margin-top: 0;
 }
@@ -51,11 +56,19 @@ h2 {
   font-size: 1.4rem;
 }
 
+.app-header {
+  margin-bottom: 28px;
+}
+
 .app-header > p:last-child {
   margin: 0;
   color: #99b9d8;
   font-size: 1.05rem;
 }
+
+/* =========================
+   TEXT
+========================= */
 
 .eyebrow {
   margin-bottom: 8px;
@@ -65,6 +78,10 @@ h2 {
   letter-spacing: 0.13em;
   text-transform: uppercase;
 }
+
+/* =========================
+   MACHINE SUMMARY
+========================= */
 
 .machine-summary {
   display: flex;
@@ -81,6 +98,10 @@ h2 {
   margin: 0;
   color: #a9c2da;
 }
+
+/* =========================
+   HEALTH BADGE
+========================= */
 
 .health-badge {
   min-width: 180px;
@@ -117,6 +138,12 @@ h2 {
   border: 1px solid #218a5d;
 }
 
+.health-badge.degrading {
+  color: #9fd3ff;
+  background: #24547a40;
+  border: 1px solid #3979a8;
+}
+
 .health-badge.warning {
   color: #ffd27c;
   background: #70521a40;
@@ -129,12 +156,30 @@ h2 {
   border: 1px solid #b44e4e;
 }
 
+.health-badge.fault {
+  color: #ff6b6b;
+  background: #6b1f2a45;
+  border: 1px solid #ff4d5a;
+}
+/* =========================
+   DASHBOARD GRID
+========================= */
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1.45fr 1fr;
   gap: 18px;
-  margin-top: 18px;
+  margin-top: 0;
+  align-items: start;
 }
+
+.dashboard-grid .panel {
+  align-self: start;
+}
+
+/* =========================
+   PANELS
+========================= */
 
 .panel {
   padding: 26px;
@@ -142,6 +187,10 @@ h2 {
   border-radius: 18px;
   background: linear-gradient(145deg, #102440, #0b182a);
 }
+
+/* =========================
+   METRICS
+========================= */
 
 .metric-grid {
   display: grid;
@@ -169,6 +218,10 @@ h2 {
   font-size: 1.05rem;
 }
 
+/* =========================
+   LIVE STATUS
+========================= */
+
 .live-status {
   margin: 20px 0 0;
   color: #b5cce1;
@@ -185,6 +238,10 @@ h2 {
   box-shadow: 0 0 0 4px #35e29c24;
 }
 
+/* =========================
+   RISK / AI LISTS
+========================= */
+
 .risk-list {
   display: grid;
   gap: 10px;
@@ -200,6 +257,7 @@ h2 {
   color: #ffc1ba;
   background: #612b2d38;
   font-size: 0.92rem;
+  line-height: 1.4;
 }
 
 .no-risk {
@@ -211,26 +269,101 @@ h2 {
   background: #13543832;
 }
 
-@media (max-width: 760px) {
-  main {
-    width: min(100% - 28px, 1180px);
-    padding-top: 28px;
-  }
+/* =========================
+   AI DIAGNOSIS
+========================= */
 
-  .machine-summary {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .health-badge {
-    width: 100%;
-    text-align: left;
-  }
-
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
+.diagnosis-panel h2 {
+  max-width: 460px;
+  margin-bottom: 12px;
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  line-height: 1.25;
 }
+
+.diagnosis-summary {
+  margin: 0 0 22px;
+  color: #c4d6e8;
+  line-height: 1.55;
+}
+
+.diagnosis-label {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.severity {
+  display: inline-block;
+  margin: 0 0 16px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.severity.healthy {
+  color: #81efb6;
+  background: #136b473d;
+}
+
+.severity.warning {
+  color: #ffd27c;
+  background: #70521a40;
+}
+
+.severity.critical {
+  color: #ffaaa0;
+  background: #862d2d42;
+}
+
+.severity.degrading {
+  color: #9fd3ff;
+  background: #24547a40;
+}
+
+.severity.healthy ~ .risk-list li {
+  color: #a7efc7;
+  background: #13543832;
+  border-left-color: #2ecb88;
+}
+
+.severity.warning ~ .risk-list li {
+  color: #ffe1a4;
+  background: #70521a40;
+  border-left-color: #e7b54c;
+}
+
+.severity.degrading ~ .risk-list li {
+  color: #b9dcf7;
+  background: #173a5638;
+  border-left-color: #58b8ff;
+}
+
+.failure-window,
+.escalation-note {
+  margin: 15px 0 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.failure-window {
+  color: #b6d6ee;
+  background: #0a1b2f;
+  border: 1px solid #244866;
+}
+
+.escalation-note {
+  color: #ffc1ba;
+  background: #612b2d38;
+  border-left: 3px solid #ff7068;
+}
+
+/* =========================
+   MACHINE FLEET
+========================= */
+
 .fleet-overview {
   display: flex;
   align-items: center;
@@ -273,6 +406,11 @@ h2 {
 .healthy-count {
   color: #81efb6;
   background: #136b473d;
+}
+
+.degrading-count {
+  color: #9fd3ff;
+  background: #24547a40;
 }
 
 .machine-grid {
@@ -353,6 +491,15 @@ h2 {
   color: #81efb6;
 }
 
+.machine-card.degrading {
+  border-top: 3px solid #58b8ff;
+}
+
+.machine-card.degrading .machine-card-top strong,
+.machine-card.degrading p {
+  color: #9fd3ff;
+}
+
 .machine-card.warning {
   border-top: 3px solid #e7b54c;
 }
@@ -372,6 +519,10 @@ h2 {
   color: #ffaaa0;
 }
 
+/* =========================
+   SELECTED MACHINE
+========================= */
+
 .selected-title {
   display: flex;
   align-items: center;
@@ -389,94 +540,9 @@ h2 {
   color: #a9c2da;
 }
 
-@media (max-width: 980px) {
-  .machine-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 760px) {
-  .fleet-overview,
-  .selected-title {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .machine-grid {
-    grid-template-columns: 1fr;
-  }
-}
-.dashboard-grid {
-  align-items: start;
-}
-
-.dashboard-grid .panel {
-  align-self: start;
-}
-
-.diagnosis-panel h2 {
-  max-width: 460px;
-  margin-bottom: 12px;
-  font-size: clamp(1.15rem, 2vw, 1.45rem);
-  line-height: 1.25;
-}
-
-.severity {
-  display: inline-block;
-  margin: 0 0 16px;
-  padding: 7px 10px;
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-
-.severity.healthy {
-  color: #81efb6;
-  background: #136b473d;
-}
-
-.severity.warning {
-  color: #ffd27c;
-  background: #70521a40;
-}
-
-.severity.critical {
-  color: #ffaaa0;
-  background: #862d2d42;
-}
-
-.diagnosis-summary {
-  margin: 0 0 22px;
-  color: #c4d6e8;
-  line-height: 1.55;
-}
-
-.diagnosis-label {
-  margin-top: 0;
-  margin-bottom: 10px;
-}
-
-.failure-window,
-.escalation-note {
-  margin: 15px 0 0;
-  padding: 12px 14px;
-  border-radius: 10px;
-  font-size: 0.88rem;
-  line-height: 1.45;
-}
-
-.failure-window {
-  color: #b6d6ee;
-  background: #0a1b2f;
-  border: 1px solid #244866;
-}
-
-.escalation-note {
-  color: #ffc1ba;
-  background: #612b2d38;
-  border-left: 3px solid #ff7068;
-}
+/* =========================
+   TREND CHART
+========================= */
 
 .trend-panel {
   margin-top: 20px;
@@ -489,40 +555,115 @@ h2 {
 .trend-panel h2 {
   margin-bottom: 18px;
 }
-.severity.healthy ~ .risk-list li {
-  color: #a7efc7;
-  background: #13543832;
-  border-left-color: #2ecb88;
+
+/* =========================
+   WORK ORDERS
+========================= */
+
+.work-order-priority,
+.work-order-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
-.severity.warning ~ .risk-list li {
-  color: #ffe1a4;
+.work-order-priority.critical {
+  color: #ffaaa0;
+  background: #862d2d42;
+  border: 1px solid #b44e4e;
+}
+
+.work-order-priority.high {
+  color: #ffd27c;
   background: #70521a40;
-  border-left-color: #e7b54c;
-}
-.degrading-count {
-  color: #9fd3ff;
-  background: #24547a40;
-}
-.machine-card.degrading {
-  border-top: 3px solid #58b8ff;
+  border: 1px solid #977025;
 }
 
-.machine-card.degrading .machine-card-top strong,
-.machine-card.degrading p {
-  color: #9fd3ff;
-}
-.health-badge.degrading {
+.work-order-priority.medium {
   color: #9fd3ff;
   background: #24547a40;
   border: 1px solid #3979a8;
 }
-.severity.degrading {
+
+.work-order-priority.low {
+  color: #81efb6;
+  background: #136b473d;
+  border: 1px solid #218a5d;
+}
+
+.work-order-status {
   color: #9fd3ff;
   background: #24547a40;
+  border: 1px solid #3979a8;
 }
-.severity.degrading ~ .risk-list li {
-  color: #b9dcf7;
-  background: #173a5638;
-  border-left-color: #58b8ff;
+
+.work-order-status.completed {
+  color: #81efb6;
+  background: #136b473d;
+  border-color: #218a5d;
+}
+
+.work-order-status.in-progress {
+  color: #ffd27c;
+  background: #70521a40;
+  border-color: #977025;
+}
+
+.work-order-status.scheduled {
+  color: #9fd3ff;
+  background: #24547a40;
+  border-color: #3979a8;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 980px) {
+  .machine-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  main {
+    width: min(100% - 28px, 1180px);
+    padding-top: 28px;
+  }
+
+  .machine-summary,
+  .selected-title,
+  .fleet-overview {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .health-badge {
+    width: 100%;
+    text-align: left;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .machine-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Machine Detail only */
+main > header.machine-detail-header {
+  margin-bottom: 18px !important;
+  border-bottom: 1px solid #1d3b57 !important;
+  padding-bottom: 18px;
+}
+
+.machine-detail-grid {
+  margin-top: 0 !important;
 }

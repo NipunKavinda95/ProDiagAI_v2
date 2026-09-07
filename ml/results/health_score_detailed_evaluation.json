@@ -1,0 +1,36 @@
+{
+  "target": "health_score_target",
+  "dataset_rows": 30000,
+  "training_samples": 24000,
+  "test_samples": 6000,
+  "test_size": 0.2,
+  "validation_method": "time_based_split",
+  "selection_metric": "MAE",
+  "best_model": "XGBoost",
+  "models": {
+    "XGBoost": {
+      "MAE": 0.9650487365679692,
+      "RMSE": 2.8991004443407764,
+      "R2": 0.9898557733985806,
+      "Mean_Error": 0.20770720157869157,
+      "Median_Absolute_Error": 0.47899627685546875,
+      "Max_Absolute_Error": 54.10204528808594
+    },
+    "Random Forest": {
+      "MAE": 1.0208236318029638,
+      "RMSE": 3.1397091860263937,
+      "R2": 0.98810207398098,
+      "Mean_Error": 0.13297443131124884,
+      "Median_Absolute_Error": 0.49426238233643716,
+      "Max_Absolute_Error": 56.80813882876383
+    },
+    "Linear Regression": {
+      "MAE": 2.070055024012348,
+      "RMSE": 4.304691214057949,
+      "R2": 0.9776346126225607,
+      "Mean_Error": 0.12137389078337336,
+      "Median_Absolute_Error": 1.0729604062046967,
+      "Max_Absolute_Error": 51.81259108468184
+    }
+  }
+}
