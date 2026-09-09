@@ -1,0 +1,371 @@
+import csv
+from pathlib import Path
+from typing import Any, Dict, List
+
+CATALOG_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "knowledge-base"
+    / "spare_parts"
+    / "spare_parts_catalog.csv"
+)
+
+
+# ============================================================
+# MACHINE TYPE NORMALIZATION
+# ============================================================
+
+MACHINE_TYPE_ALIASES = {
+    "electric motor": "motor",
+    "motor": "motor",
+    "industrial motor": "motor",
+    "process drive motor": "motor",
+    "packaging drive motor": "motor",
+    "centrifugal pump": "pump",
+    "water pump": "pump",
+    "cooling circulation pump": "pump",
+    "pump": "pump",
+    "industrial fan": "fan",
+    "cooling fan": "fan",
+    "extraction fan": "fan",
+    "process extraction fan": "fan",
+    "ventilation fan": "fan",
+    "fan": "fan",
+    "gearbox": "gearbox",
+    "mixer gearbox": "gearbox",
+    "conveyor gearbox": "gearbox",
+    "conveyor": "conveyor",
+    "packaging conveyor": "conveyor",
+    "raw material conveyor": "conveyor",
+    "air compressor": "compressor",
+    "backup air compressor": "compressor",
+    "compressor": "compressor",
+}
+
+
+# ============================================================
+# FAULT TYPE NORMALIZATION
+# ============================================================
+
+FAULT_TYPE_ALIASES = {
+    "bearing wear": "bearing_wear",
+    "bearing-wear": "bearing_wear",
+    "bearing failure": "bearing_wear",
+    "bearing degradation": "bearing_wear",
+    "bearing": "bearing_wear",
+    "cavitation": "cavitation",
+    "pump cavitation": "cavitation",
+    "overload": "overload",
+    "motor overload": "overload",
+    "compressor overload": "overload",
+    "belt misalignment": "belt_misalignment",
+    "belt-misalignment": "belt_misalignment",
+    "belt alignment": "belt_misalignment",
+    "fan imbalance": "fan_imbalance",
+    "fan-imbalance": "fan_imbalance",
+    "imbalance": "fan_imbalance",
+    "gear wear": "gear_wear",
+    "gear-wear": "gear_wear",
+    "gear failure": "gear_wear",
+    "sensor failure": "sensor_failure",
+    "sensor-failure": "sensor_failure",
+}
+
+
+# ============================================================
+# HELPERS
+# ============================================================
+
+
+def normalize_text(value: Any) -> str:
+    if value is None:
+        return ""
+
+    return str(value).strip().lower().replace("-", "_").replace("/", "_")
+
+
+def normalize_machine_type(machine_type: Any) -> str:
+    value = normalize_text(machine_type)
+
+    if not value:
+        return ""
+
+    # Direct alias
+    if value in MACHINE_TYPE_ALIASES:
+        return MACHINE_TYPE_ALIASES[value]
+
+    # Keyword-based fallback
+    if "motor" in value:
+        return "motor"
+
+    if "pump" in value:
+        return "pump"
+
+    if "fan" in value:
+        return "fan"
+
+    if "gearbox" in value or "gear box" in value:
+        return "gearbox"
+
+    if "conveyor" in value:
+        return "conveyor"
+
+    if "compressor" in value:
+        return "compressor"
+
+    return value
+
+
+def normalize_fault_type(fault_type: Any) -> str:
+    value = normalize_text(fault_type)
+
+    if not value:
+        return ""
+
+    # Direct alias
+    if value in FAULT_TYPE_ALIASES:
+        return FAULT_TYPE_ALIASES[value]
+
+    # Keyword fallback
+    if "bearing" in value:
+        return "bearing_wear"
+
+    if "cavitation" in value:
+        return "cavitation"
+
+    if "overload" in value:
+        return "overload"
+
+    if "belt" in value and ("misalign" in value or "alignment" in value):
+        return "belt_misalignment"
+
+    if "imbalance" in value:
+        return "fan_imbalance"
+
+    if "gear" in value and ("wear" in value or "failure" in value):
+        return "gear_wear"
+
+    if "sensor" in value and "failure" in value:
+        return "sensor_failure"
+
+    return value
+
+
+def normalize_catalog_value(value: Any) -> str:
+    return normalize_text(value)
+
+
+# ============================================================
+# LOAD CATALOG
+# ============================================================
+
+
+def load_spare_parts() -> List[Dict[str, str]]:
+    """Load the ProDiag spare-parts catalog."""
+
+    if not CATALOG_PATH.exists():
+        raise FileNotFoundError(f"Spare-parts catalog not found: {CATALOG_PATH}")
+
+    with CATALOG_PATH.open(
+        "r",
+        encoding="utf-8-sig",
+        newline="",
+    ) as file:
+        return list(csv.DictReader(file))
+
+
+# ============================================================
+# FIND SPARE PARTS
+# ============================================================
+
+
+def find_spare_parts(
+    fault_type: str,
+    machine_type: str | None = None,
+) -> List[Dict[str, Any]]:
+    """
+    Find spare parts relevant to a machine fault.
+
+    Matching priority:
+
+    1. Fault type must match.
+    2. Equipment type must match when specified.
+    3. Catalog entries marked "All" are always compatible.
+    4. Machine-type aliases are normalized before matching.
+    5. No part number or price is generated by AI.
+    """
+
+    if not isinstance(fault_type, str) or not fault_type.strip():
+        raise ValueError("Fault type is required.")
+
+    normalized_fault = normalize_fault_type(fault_type)
+
+    normalized_machine = normalize_machine_type(machine_type)
+
+    parts = load_spare_parts()
+
+    matches: List[Dict[str, Any]] = []
+
+    for part in parts:
+
+        catalog_fault = normalize_fault_type(part.get("fault_type", ""))
+
+        catalog_equipment = normalize_machine_type(part.get("equipment_type", ""))
+
+        # ----------------------------------------------------
+        # FAULT MATCH
+        # ----------------------------------------------------
+
+        fault_match = catalog_fault == normalized_fault
+
+        if not fault_match:
+            continue
+
+        # ----------------------------------------------------
+        # EQUIPMENT MATCH
+        # ----------------------------------------------------
+
+        equipment_match = False
+
+        # Catalog "All" means compatible with every machine.
+        if catalog_equipment in {
+            "",
+            "all",
+            "any",
+            "universal",
+        }:
+            equipment_match = True
+
+        # Exact normalized machine type.
+        elif normalized_machine and catalog_equipment == normalized_machine:
+            equipment_match = True
+
+        # If machine type is unknown, keep the fault match.
+        elif not normalized_machine:
+            equipment_match = True
+
+        if not equipment_match:
+            continue
+
+        # ----------------------------------------------------
+        # NORMALIZE NUMERIC VALUES
+        # ----------------------------------------------------
+
+        normalized_part = dict(part)
+
+        try:
+            normalized_part["estimated_cost_usd"] = float(
+                part.get(
+                    "estimated_cost_usd",
+                    0,
+                )
+                or 0
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            normalized_part["estimated_cost_usd"] = 0.0
+
+        # Default quantity is one.
+        try:
+            quantity = int(
+                part.get(
+                    "quantity",
+                    1,
+                )
+                or 1
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            quantity = 1
+
+        if quantity < 1:
+            quantity = 1
+
+        normalized_part["quantity"] = quantity
+
+        matches.append(normalized_part)
+
+    return matches
+
+
+# ============================================================
+# SPARE PARTS RECOMMENDATION
+# ============================================================
+
+
+def get_spare_parts_recommendation(
+    machine: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Return spare-parts recommendations for a machine."""
+
+    if not isinstance(machine, dict):
+        raise ValueError("Machine context must be an object.")
+
+    machine_id = machine.get("machine_id")
+
+    fault_type = machine.get("fault_type")
+
+    machine_type = machine.get("machine_type")
+
+    if not machine_id:
+        raise ValueError("Machine ID is required.")
+
+    if not fault_type:
+        return {
+            "machine_id": machine_id,
+            "fault_type": None,
+            "machine_type": machine_type,
+            "parts": [],
+            "parts_found": False,
+            "source": "ProDiag Spare Parts Catalog",
+        }
+
+    matches = find_spare_parts(
+        fault_type=fault_type,
+        machine_type=machine_type,
+    )
+
+    parts_cost_usd = 0.0
+
+    for part in matches:
+        try:
+            unit_cost = float(
+                part.get(
+                    "estimated_cost_usd",
+                    0,
+                )
+                or 0
+            )
+
+            quantity = float(
+                part.get(
+                    "quantity",
+                    1,
+                )
+                or 1
+            )
+
+            parts_cost_usd += unit_cost * quantity
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            continue
+
+    return {
+        "machine_id": machine_id,
+        "fault_type": fault_type,
+        "machine_type": machine_type,
+        "parts": matches,
+        "parts_found": bool(matches),
+        "parts_count": len(matches),
+        "parts_cost_usd": round(
+            parts_cost_usd,
+            2,
+        ),
+        "source": "ProDiag Spare Parts Catalog",
+    }

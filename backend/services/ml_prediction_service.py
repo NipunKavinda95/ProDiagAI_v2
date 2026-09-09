@@ -79,6 +79,34 @@ class MLPredictionService:
         if not machine_id:
             raise ValueError("machine_id is required for ML prediction")
 
+        condition = str(
+            telemetry.get(
+                "condition",
+                telemetry.get("health_status", ""),
+            )
+        ).upper()
+
+        # --------------------------------------------------------
+        # PHYSICAL MACHINE STATE OVERRIDES
+        # --------------------------------------------------------
+        # FAULTED is an observed machine condition, not an ML
+        # prediction. Do not allow cached/model output to make
+        # a physically failed machine appear healthy.
+        if condition == "FAULTED":
+            prediction = {
+                "failure_probability": 1.0,
+                "failure_within_1h": True,
+                "failure_threshold": self.FAILURE_THRESHOLD,
+                "health_score": 0.0,
+                "prediction_status": "ALREADY_FAULTED",
+            }
+
+            self.last_predictions[machine_id] = prediction.copy()
+            return prediction
+
+        # --------------------------------------------------------
+        # PREPARE ML FEATURES
+        # --------------------------------------------------------
         features = self._prepare_features(telemetry)
 
         # No new ML sample yet.
@@ -88,39 +116,72 @@ class MLPredictionService:
             cached_prediction = self.last_predictions.get(machine_id)
 
             if cached_prediction is not None:
-                return cached_prediction.copy()
+                prediction = cached_prediction.copy()
+
+                # Always refresh the operational-state status.
+                if condition == "REPAIRING":
+                    prediction["prediction_status"] = "UNDER_MAINTENANCE"
+                elif condition == "RESTART":
+                    prediction["prediction_status"] = "RESTARTING"
+                else:
+                    prediction["prediction_status"] = (
+                        "HIGH_RISK"
+                        if prediction.get("failure_within_1h", False)
+                        else "NORMAL"
+                    )
+
+                self.last_predictions[machine_id] = prediction.copy()
+                return prediction
 
             # Safety fallback. This should only occur if the very
             # first telemetry packet cannot produce ML features.
-            return {
+            prediction = {
                 "failure_probability": 0.0,
                 "failure_within_1h": False,
                 "failure_threshold": self.FAILURE_THRESHOLD,
                 "health_score": 100.0,
             }
 
-        # Run the trained models only on the new ML sample.
+            prediction["prediction_status"] = (
+                "UNDER_MAINTENANCE"
+                if condition == "REPAIRING"
+                else "RESTARTING" if condition == "RESTART" else "NORMAL"
+            )
+
+            self.last_predictions[machine_id] = prediction.copy()
+            return prediction
+
+        # --------------------------------------------------------
+        # RUN TRAINED MODELS
+        # --------------------------------------------------------
         failure_probability = float(self.failure_model.predict_proba(features)[0][1])
 
         failure_prediction = failure_probability >= self.FAILURE_THRESHOLD
 
         health_score = float(self.health_model.predict(features)[0])
 
-        health_score = max(0.0, min(100.0, health_score))
+        health_score = max(
+            0.0,
+            min(100.0, health_score),
+        )
 
         prediction = {
-            "failure_probability": round(failure_probability, 4),
+            "failure_probability": round(
+                failure_probability,
+                4,
+            ),
             "failure_within_1h": failure_prediction,
             "failure_threshold": self.FAILURE_THRESHOLD,
-            "health_score": round(health_score, 2),
+            "health_score": round(
+                health_score,
+                2,
+            ),
         }
-        condition = str(
-            telemetry.get("condition", telemetry.get("health_status", ""))
-        ).upper()
 
-        if condition == "FAULTED":
-            prediction["prediction_status"] = "ALREADY_FAULTED"
-        elif condition == "REPAIRING":
+        # --------------------------------------------------------
+        # OPERATIONAL STATE STATUS
+        # --------------------------------------------------------
+        if condition == "REPAIRING":
             prediction["prediction_status"] = "UNDER_MAINTENANCE"
         elif condition == "RESTART":
             prediction["prediction_status"] = "RESTARTING"

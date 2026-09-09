@@ -14,6 +14,7 @@ from openai import OpenAI
 
 from services.rag_retrieval_service import retrieve_knowledge
 from services.security_service import validate_copilot_response
+from services.maintenance_agent_service import run_maintenance_agent
 
 load_dotenv()
 
@@ -217,6 +218,22 @@ def build_machine_context(machine: Dict) -> str:
         context,
         indent=2,
         default=str,
+    )
+
+
+def run_agent_capability(
+    machine: Dict,
+    request: str = "Create a maintenance plan",
+    diagnosis: Optional[Dict] = None,
+) -> Dict:
+    """
+    Execute a ProDiag Maintenance Agent request.
+    """
+
+    return run_maintenance_agent(
+        machine=machine,
+        request=request,
+        diagnosis=diagnosis,
     )
 
 

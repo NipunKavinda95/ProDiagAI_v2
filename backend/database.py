@@ -152,6 +152,25 @@ class WorkOrder(Base):
     ai_diagnosis = Column(Text, nullable=True)
     ai_recommendation = Column(Text, nullable=True)
 
+    # --------------------------------------------------------
+    # MAINTENANCE DETAILS
+    # --------------------------------------------------------
+
+    spare_parts = Column(Text, nullable=True)
+
+    parts_cost_usd = Column(Float, nullable=True)
+    labour_cost_usd = Column(Float, nullable=True)
+    estimated_total_cost_usd = Column(Float, nullable=True)
+
+    # --------------------------------------------------------
+    # ENGINEER APPROVAL
+    # --------------------------------------------------------
+
+    approval_status = Column(String, nullable=True)
+    engineer_name = Column(String, nullable=True)
+    approval_comment = Column(Text, nullable=True)
+    approved_at = Column(String, nullable=True)
+
     created_at = Column(String, nullable=False)
     updated_at = Column(String, nullable=False)
     completed_at = Column(String, nullable=True)
@@ -179,6 +198,16 @@ def migrate_database():
         "alerts": {
             "ml_failure_probability": "FLOAT",
             "ml_failure_within_1h": "BOOLEAN",
+        },
+        "work_orders": {
+            "spare_parts": "TEXT",
+            "parts_cost_usd": "FLOAT",
+            "labour_cost_usd": "FLOAT",
+            "estimated_total_cost_usd": "FLOAT",
+            "approval_status": "VARCHAR",
+            "engineer_name": "VARCHAR",
+            "approval_comment": "TEXT",
+            "approved_at": "VARCHAR",
         },
     }
 

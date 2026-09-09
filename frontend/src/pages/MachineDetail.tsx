@@ -14,6 +14,7 @@ import {
 type MachineData = {
     machine_id: string;
     machine_name: string;
+    machine_type?: string;
     timestamp: string;
     temperature_c: number;
     vibration_mm_s: number;
@@ -47,6 +48,49 @@ type TelemetryResponse = {
     count: number;
     machines: MachineData[];
 };
+
+function getDisplayedHealthStatus(machine: MachineData) {
+    const condition = (
+        machine.condition ||
+        machine.health_status ||
+        "HEALTHY"
+    ).toUpperCase();
+
+    // Actual machine lifecycle states remain authoritative.
+    if (condition === "FAULT" || condition === "FAULTED") {
+        return "FAULTED";
+    }
+
+    if (condition === "REPAIRING") {
+        return "REPAIRING";
+    }
+
+    if (condition === "RESTART") {
+        return "RESTART";
+    }
+
+    // For operating machines, health status follows
+    // the ML health score.
+    const score = Number(machine.health_score);
+
+    if (score < 20) {
+        return "FAULTED";
+    }
+
+    if (score < 40) {
+        return "CRITICAL";
+    }
+
+    if (score < 60) {
+        return "WARNING";
+    }
+
+    if (score < 80) {
+        return "DEGRADING";
+    }
+
+    return "HEALTHY";
+}
 
 type HistoryReading = {
     timestamp: string;
@@ -90,6 +134,31 @@ type AIDiagnosisResponse = {
     };
     ai_diagnosis: AIDiagnosis;
 };
+type MaintenanceProposal = {
+    proposal_status: "PENDING_ENGINEER_APPROVAL" | "APPROVED" | "REJECTED";
+    machine_id: string;
+    machine_name: string;
+    machine_type?: string;
+    condition: string;
+    fault_type?: string;
+    priority: string;
+    title: string;
+    recommended_actions: string[];
+    cost_estimate?: {
+        condition: string;
+        currency: string;
+        estimated_labour_hours: number;
+        estimated_total_cost_usd: number;
+        labour_cost_usd: number;
+        labour_rate_usd_per_hour: number;
+        machine_id: string;
+        parts_cost_usd: number;
+        parts_count: number;
+    };
+    requires_engineer_approval: boolean;
+    auto_create_work_order: boolean;
+    source: string;
+};
 
 function MachineDetail() {
 
@@ -129,6 +198,14 @@ function MachineDetail() {
     const [workOrderLoading, setWorkOrderLoading] = useState(false);
     const [workOrderMessage, setWorkOrderMessage] = useState("");
     const [workOrderError, setWorkOrderError] = useState("");
+
+    const [maintenanceProposal, setMaintenanceProposal] =
+        useState<MaintenanceProposal | null>(null);
+
+    const [engineerName, setEngineerName] = useState("");
+    const [approvalComment, setApprovalComment] = useState("");
+    const [approvalLoading, setApprovalLoading] = useState(false);
+    const [approvalError, setApprovalError] = useState("");
 
     useEffect(() => {
         if (!machineId) return;
@@ -308,51 +385,122 @@ function MachineDetail() {
 
         try {
             const response = await fetch(
-                "http://127.0.0.1:5000/api/work-orders",
+                "http://127.0.0.1:5000/api/maintenance/agent",
                 {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                        machine_id: machine.machine_id,
-                        machine_name: machine.machine_name,
-                        title: `Maintenance Required — ${machine.fault_type
-                            ? machine.fault_type.replace(/_/g, " ")
-                            : "Machine Condition"
-                            }`,
-                        description: `Maintenance action required for ${machine.machine_name} based on the current machine condition and AI assessment.`,
-                        priority:
-                            aiDiagnosis.urgency === "CRITICAL"
-                                ? "CRITICAL"
-                                : aiDiagnosis.urgency === "HIGH"
-                                    ? "HIGH"
-                                    : "MEDIUM",
-                        fault_type: machine.fault_type ?? null,
-                        ai_diagnosis: aiDiagnosis.diagnosis,
-                        ai_recommendation:
-                            aiDiagnosis.recommended_actions.join("\n"),
+                        machine: {
+                            machine_id: machine.machine_id,
+                            machine_name: machine.machine_name,
+                            machine_type: machine.machine_type,
+                            condition: machine.condition,
+                            fault_type: machine.fault_type,
+                        },
+                        request: "Prepare a work order",
+                        diagnosis: aiDiagnosis,
                     }),
                 }
             );
 
-            if (!response.ok) {
-                throw new Error("Could not create work order");
-            }
-
             const data = await response.json();
 
-            setWorkOrderMessage(
-                `Work Order #${data.work_order_id} created successfully.`
-            );
+            if (!response.ok) {
+                throw new Error(
+                    data.error || "Could not prepare maintenance proposal"
+                );
+            }
+
+            const proposal = data.result;
+
+            if (proposal?.proposal_status === "PENDING_ENGINEER_APPROVAL") {
+                setMaintenanceProposal(proposal);
+
+                setWorkOrderMessage(
+                    "Maintenance proposal prepared. Engineer approval is required before creating the Work Order."
+                );
+
+                setApprovalError("");
+            } else {
+                throw new Error(
+                    "Maintenance Agent did not return a valid approval proposal."
+                );
+            }
         } catch (err) {
             setWorkOrderError(
                 err instanceof Error
                     ? err.message
-                    : "Work order creation failed"
+                    : "Maintenance proposal failed"
             );
         } finally {
             setWorkOrderLoading(false);
+        }
+    };
+
+    const processMaintenanceApproval = async (
+        decision: "approve" | "reject"
+    ) => {
+        if (!maintenanceProposal) return;
+
+        if (!engineerName.trim()) {
+            setApprovalError("Engineer name is required.");
+            return;
+        }
+
+        setApprovalLoading(true);
+        setApprovalError("");
+        setWorkOrderMessage("");
+
+        try {
+            const response = await fetch(
+                "http://127.0.0.1:5000/api/maintenance/approve",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        proposal: maintenanceProposal,
+                        decision,
+                        engineer_name: engineerName.trim(),
+                        comment: approvalComment.trim(),
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.error || "Could not process engineer approval"
+                );
+            }
+
+            if (decision === "approve" && data.work_order) {
+                setWorkOrderMessage(
+                    `Engineer approved the proposal. Work Order #${data.work_order.work_order_id} created successfully.`
+                );
+            } else {
+                setWorkOrderMessage(
+                    "Maintenance proposal rejected. No Work Order was created."
+                );
+            }
+
+            setMaintenanceProposal({
+                ...maintenanceProposal,
+                proposal_status:
+                    decision === "approve" ? "APPROVED" : "REJECTED",
+            });
+        } catch (err) {
+            setApprovalError(
+                err instanceof Error
+                    ? err.message
+                    : "Engineer approval failed"
+            );
+        } finally {
+            setApprovalLoading(false);
         }
     };
 
@@ -806,18 +954,12 @@ function MachineDetail() {
                 </div>
 
                 <div
-                    className={`health-badge ${machine.health_status.toLowerCase()}`}
+                    className={`health-badge ${getDisplayedHealthStatus(machine).toLowerCase()}`}
                 >
-                    <span>
-                        Health score
-                    </span>
-
-                    <strong>
-                        {machine.health_score}
-                    </strong>
-
+                    <span>Health score</span>
+                    <strong>{machine.health_score}</strong>
                     <small>
-                        / 100 · {machine.health_status}
+                        / 100 · {getDisplayedHealthStatus(machine)}
                     </small>
                 </div>
 
@@ -1781,37 +1923,28 @@ function MachineDetail() {
                                     "1px solid #1d3b57",
                             }}
                         >
-                            <button
-                                type="button"
-                                onClick={
-                                    createWorkOrder
-                                }
-                                disabled={
-                                    workOrderLoading
-                                }
-                                style={{
-                                    padding:
-                                        "12px 18px",
-                                    borderRadius:
-                                        "10px",
-                                    border:
-                                        "1px solid #52d5ff",
-                                    background:
-                                        "#10263b",
-                                    color:
-                                        "#ffffff",
-                                    fontWeight:
-                                        600,
-                                    cursor:
-                                        workOrderLoading
+                            {!maintenanceProposal ? (
+                                <button
+                                    type="button"
+                                    onClick={createWorkOrder}
+                                    disabled={workOrderLoading}
+                                    style={{
+                                        padding: "12px 18px",
+                                        borderRadius: "10px",
+                                        border: "1px solid #52d5ff",
+                                        background: "#10263b",
+                                        color: "#ffffff",
+                                        fontWeight: 600,
+                                        cursor: workOrderLoading
                                             ? "wait"
                                             : "pointer",
-                                }}
-                            >
-                                {workOrderLoading
-                                    ? "Creating Work Order..."
-                                    : "Create Work Order"}
-                            </button>
+                                    }}
+                                >
+                                    {workOrderLoading
+                                        ? "Preparing Proposal..."
+                                        : "Prepare Maintenance Proposal"}
+                                </button>
+                            ) : null}
 
                             <button
                                 type="button"
@@ -1865,6 +1998,270 @@ function MachineDetail() {
                                 Close Report
                             </button>
                         </div>
+
+                        {maintenanceProposal && (
+                            <section
+                                style={{
+                                    marginTop: "24px",
+                                    padding: "20px",
+                                    borderRadius: "12px",
+                                    border: "1px solid #285273",
+                                    background: "#10263b",
+                                }}
+                            >
+                                <p className="eyebrow">
+                                    Maintenance Proposal
+                                </p>
+
+                                <h3
+                                    style={{
+                                        marginBottom: "8px",
+                                    }}
+                                >
+                                    {maintenanceProposal.title}
+                                </h3>
+
+                                <p
+                                    style={{
+                                        color: "#9ab3d0",
+                                        marginBottom: "18px",
+                                    }}
+                                >
+                                    Engineer review is required before a Work Order can be created.
+                                </p>
+
+                                <div className="metric-grid">
+                                    <div className="metric">
+                                        <span>Condition</span>
+                                        <strong>
+                                            {maintenanceProposal.condition}
+                                        </strong>
+                                    </div>
+
+                                    <div className="metric">
+                                        <span>Priority</span>
+                                        <strong>
+                                            {maintenanceProposal.priority}
+                                        </strong>
+                                    </div>
+
+                                    <div className="metric">
+                                        <span>Fault</span>
+                                        <strong>
+                                            {maintenanceProposal.fault_type
+                                                ? maintenanceProposal.fault_type.replace(
+                                                    /_/g,
+                                                    " "
+                                                )
+                                                : "—"}
+                                        </strong>
+                                    </div>
+
+                                    <div className="metric">
+                                        <span>Estimated Cost</span>
+                                        <strong>
+                                            {maintenanceProposal.cost_estimate
+                                                ? `$${maintenanceProposal.cost_estimate.estimated_total_cost_usd.toFixed(
+                                                    2
+                                                )}`
+                                                : "—"}
+                                        </strong>
+                                    </div>
+                                </div>
+
+                                <div
+                                    style={{
+                                        marginTop: "20px",
+                                        padding: "16px",
+                                        borderRadius: "10px",
+                                        border: "1px solid #285273",
+                                        background: "#0b182a",
+                                    }}
+                                >
+                                    <p className="eyebrow">
+                                        Recommended Actions
+                                    </p>
+
+                                    <ul className="risk-list">
+                                        {maintenanceProposal.recommended_actions.map(
+                                            (action) => (
+                                                <li key={action}>{action}</li>
+                                            )
+                                        )}
+                                    </ul>
+                                </div>
+
+                                {maintenanceProposal.proposal_status ===
+                                    "PENDING_ENGINEER_APPROVAL" && (
+                                        <>
+                                            <div
+                                                style={{
+                                                    marginTop: "20px",
+                                                }}
+                                            >
+                                                <label
+                                                    style={{
+                                                        display: "block",
+                                                        marginBottom: "8px",
+                                                        fontSize: "13px",
+                                                        color: "#9ab3d0",
+                                                    }}
+                                                >
+                                                    Engineer Name
+                                                </label>
+
+                                                <input
+                                                    type="text"
+                                                    value={engineerName}
+                                                    onChange={(event) =>
+                                                        setEngineerName(event.target.value)
+                                                    }
+                                                    placeholder="Enter engineer name"
+                                                    disabled={approvalLoading}
+                                                    style={{
+                                                        width: "100%",
+                                                        padding: "12px 14px",
+                                                        borderRadius: "10px",
+                                                        border: "1px solid #285273",
+                                                        background: "#071421",
+                                                        color: "#ffffff",
+                                                        fontFamily: "inherit",
+                                                        fontSize: "14px",
+                                                        boxSizing: "border-box",
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div
+                                                style={{
+                                                    marginTop: "16px",
+                                                }}
+                                            >
+                                                <label
+                                                    style={{
+                                                        display: "block",
+                                                        marginBottom: "8px",
+                                                        fontSize: "13px",
+                                                        color: "#9ab3d0",
+                                                    }}
+                                                >
+                                                    Approval Comment
+                                                </label>
+
+                                                <textarea
+                                                    value={approvalComment}
+                                                    onChange={(event) =>
+                                                        setApprovalComment(event.target.value)
+                                                    }
+                                                    placeholder="Add an approval or rejection comment..."
+                                                    disabled={approvalLoading}
+                                                    rows={3}
+                                                    style={{
+                                                        width: "100%",
+                                                        padding: "12px 14px",
+                                                        borderRadius: "10px",
+                                                        border: "1px solid #285273",
+                                                        background: "#071421",
+                                                        color: "#ffffff",
+                                                        fontFamily: "inherit",
+                                                        fontSize: "14px",
+                                                        resize: "vertical",
+                                                        boxSizing: "border-box",
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    gap: "12px",
+                                                    flexWrap: "wrap",
+                                                    marginTop: "18px",
+                                                }}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        processMaintenanceApproval("reject")
+                                                    }
+                                                    disabled={approvalLoading}
+                                                    style={{
+                                                        padding: "12px 18px",
+                                                        borderRadius: "10px",
+                                                        border: "1px solid #ff6b6b",
+                                                        background: "transparent",
+                                                        color: "#ff9f9f",
+                                                        fontWeight: 600,
+                                                        cursor: approvalLoading
+                                                            ? "wait"
+                                                            : "pointer",
+                                                    }}
+                                                >
+                                                    Reject Proposal
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        processMaintenanceApproval("approve")
+                                                    }
+                                                    disabled={approvalLoading}
+                                                    style={{
+                                                        padding: "12px 18px",
+                                                        borderRadius: "10px",
+                                                        border: "1px solid #7ee2a8",
+                                                        background: "#10263b",
+                                                        color: "#ffffff",
+                                                        fontWeight: 600,
+                                                        cursor: approvalLoading
+                                                            ? "wait"
+                                                            : "pointer",
+                                                    }}
+                                                >
+                                                    {approvalLoading
+                                                        ? "Processing Approval..."
+                                                        : "Approve & Create Work Order"}
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+
+                                {approvalError && (
+                                    <p
+                                        className="escalation-note"
+                                        style={{
+                                            marginTop: "16px",
+                                        }}
+                                    >
+                                        {approvalError}
+                                    </p>
+                                )}
+
+                                {maintenanceProposal.proposal_status ===
+                                    "APPROVED" && (
+                                        <p
+                                            className="live-status"
+                                            style={{
+                                                marginTop: "16px",
+                                            }}
+                                        >
+                                            ✓ Proposal approved and Work Order created.
+                                        </p>
+                                    )}
+
+                                {maintenanceProposal.proposal_status ===
+                                    "REJECTED" && (
+                                        <p
+                                            className="escalation-note"
+                                            style={{
+                                                marginTop: "16px",
+                                            }}
+                                        >
+                                            Proposal rejected. No Work Order was created.
+                                        </p>
+                                    )}
+                            </section>
+                        )}
 
                         {workOrderMessage && (
                             <p className="live-status">

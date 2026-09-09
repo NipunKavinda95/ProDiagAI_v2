@@ -63,7 +63,7 @@ def calculate_health(
     #
 
     if health_score < 20:
-        status = "FAULT"
+        status = "FAULTED"
 
     elif health_score < 40:
         status = "CRITICAL"

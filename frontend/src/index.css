@@ -132,34 +132,81 @@ h2 {
   font-weight: 700;
 }
 
+/* HEALTHY */
 .health-badge.healthy {
   color: #81efb6;
   background: #136b473d;
   border: 1px solid #218a5d;
 }
 
+.health-badge.healthy strong {
+  color: #81efb6;
+}
+
+/* DEGRADING */
 .health-badge.degrading {
   color: #9fd3ff;
   background: #24547a40;
   border: 1px solid #3979a8;
 }
 
+.health-badge.degrading strong {
+  color: #9fd3ff;
+}
+
+/* WARNING */
 .health-badge.warning {
   color: #ffd27c;
   background: #70521a40;
   border: 1px solid #977025;
 }
 
+.health-badge.warning strong {
+  color: #ffd27c;
+}
+
+/* CRITICAL */
 .health-badge.critical {
   color: #ffaaa0;
   background: #862d2d42;
   border: 1px solid #b44e4e;
 }
 
-.health-badge.fault {
+.health-badge.critical strong {
+  color: #ff6b6b;
+}
+
+/* FAULTED */
+.health-badge.faulted {
   color: #ff6b6b;
   background: #6b1f2a45;
   border: 1px solid #ff4d5a;
+}
+
+.health-badge.faulted strong {
+  color: #ff4d5a;
+}
+
+/* REPAIRING */
+.health-badge.repairing {
+  color: #f6c85f;
+  background: #70521a40;
+  border: 1px solid #c49a32;
+}
+
+.health-badge.repairing strong {
+  color: #f6c85f;
+}
+
+/* RESTART */
+.health-badge.restart {
+  color: #7ab8ff;
+  background: #24547a40;
+  border: 1px solid #3979a8;
+}
+
+.health-badge.restart strong {
+  color: #7ab8ff;
 }
 /* =========================
    DASHBOARD GRID
@@ -392,6 +439,10 @@ h2 {
   font-size: 0.78rem;
   font-weight: 800;
 }
+.faulted-count {
+  color: #ff6b6b;
+  background: #6b1f2a45;
+}
 
 .critical-count {
   color: #ffaaa0;
@@ -517,6 +568,16 @@ h2 {
 .machine-card.critical .machine-card-top strong,
 .machine-card.critical p {
   color: #ffaaa0;
+}
+
+.machine-card.faulted {
+  border-top: 3px solid #ff4d5a;
+  background: linear-gradient(145deg, #3a1720, #1d1118);
+}
+
+.machine-card.faulted .machine-card-top strong,
+.machine-card.faulted p {
+  color: #ff6b6b;
 }
 
 /* =========================

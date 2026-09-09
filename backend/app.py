@@ -30,6 +30,8 @@ from services.security_service import (
     validate_copilot_question,
     validate_conversation_history,
 )
+from services.engineer_approval_service import process_engineer_approval
+from services.maintenance_agent_service import run_maintenance_agent
 
 app = Flask(__name__)
 
@@ -561,6 +563,140 @@ def update_work_order_status(work_order_id):
         return jsonify({"error": "Work order not found"}), 404
 
     return jsonify(work_order)
+
+
+@app.post("/api/maintenance/agent")
+def maintenance_agent():
+    data = request.get_json() or {}
+
+    machine = data.get("machine")
+    request_text = data.get("request", "Create a maintenance plan")
+    diagnosis = data.get("diagnosis")
+
+    if not machine:
+        return jsonify({"error": "machine is required"}), 400
+
+    if not isinstance(machine, dict):
+        return jsonify({"error": "machine must be an object"}), 400
+
+    if not isinstance(request_text, str) or not request_text.strip():
+        return jsonify({"error": "request must be text"}), 400
+
+    try:
+        result = run_maintenance_agent(
+            machine=machine,
+            request=request_text,
+            diagnosis=diagnosis,
+        )
+
+        return jsonify(result), 200
+
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+
+    except Exception as error:
+        print(f"Maintenance Agent failed: {error}")
+        return jsonify({"error": "Could not run Maintenance Agent"}), 500
+
+
+@app.post("/api/maintenance/approve")
+def approve_maintenance_proposal():
+    data = request.get_json() or {}
+
+    proposal = data.get("proposal")
+    decision = data.get("decision")
+    engineer_name = data.get("engineer_name")
+    comment = data.get("comment", "")
+
+    if not proposal:
+        return jsonify({"error": "proposal is required"}), 400
+
+    if not decision:
+        return jsonify({"error": "decision is required"}), 400
+
+    if not engineer_name:
+        return jsonify({"error": "engineer_name is required"}), 400
+
+    try:
+        approval = process_engineer_approval(
+            proposal=proposal,
+            decision=decision,
+            engineer_name=engineer_name,
+            comment=comment,
+        )
+
+        work_order = None
+
+        if approval["proposal_status"] == "APPROVED":
+            machine_id = proposal.get("machine_id")
+
+            # Link the current active alert to the Work Order.
+            alert_id = None
+
+            active_alert = alert_service.get_machine_alert(machine_id)
+
+            if active_alert:
+                alert_id = active_alert.get("alert_id")
+
+            # Link the latest fault event to the Work Order.
+            fault_event_id = None
+
+            fault_events = fault_event_service.get_history(
+                machine_id=machine_id,
+                limit=1,
+            )
+
+            if fault_events:
+                fault_event_id = fault_events[0].get("event_id")
+
+            print(
+                f"[AGENT WORK ORDER LINK] "
+                f"{machine_id} -> "
+                f"alert_id={alert_id}, "
+                f"fault_event_id={fault_event_id}"
+            )
+
+            approved_proposal = {
+                **proposal,
+                "proposal_status": "APPROVED",
+                "comment": comment,
+                "alert_id": alert_id,
+                "fault_event_id": fault_event_id,
+                "engineer_name": engineer_name,
+                "approved_at": approval["approved_at"],
+            }
+
+            work_order = work_order_service.create_from_approved_proposal(
+                approved_proposal
+            )
+
+            if work_order is None:
+                return (
+                    jsonify(
+                        {
+                            "error": "Approval succeeded but work order creation failed.",
+                            "approval": approval,
+                        }
+                    ),
+                    500,
+                )
+
+        return (
+            jsonify(
+                {
+                    "approval": approval,
+                    "work_order": work_order,
+                }
+            ),
+            200,
+        )
+
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+
+    except Exception as error:
+        print(f"Maintenance approval failed: {error}")
+        return jsonify({"error": "Could not process maintenance approval"}), 500
 
 
 @app.route("/api/rag/search", methods=["GET"])

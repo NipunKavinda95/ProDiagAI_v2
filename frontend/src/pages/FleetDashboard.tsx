@@ -10,6 +10,7 @@ type MachineData = {
     current_a: number;
     rpm: number;
     status: string;
+    condition: string;
     health_score: number;
     health_status:
     | "HEALTHY"
@@ -24,6 +25,49 @@ type TelemetryResponse = {
     count: number;
     machines: MachineData[];
 };
+
+function getOperationalStatus(machine: MachineData) {
+    const condition = (
+        machine.condition ||
+        machine.health_status ||
+        "HEALTHY"
+    ).toUpperCase();
+
+    // Actual machine states always take priority.
+    if (condition === "FAULT" || condition === "FAULTED") {
+        return "FAULTED";
+    }
+
+    if (condition === "REPAIRING") {
+        return "REPAIRING";
+    }
+
+    if (condition === "RESTART") {
+        return "RESTART";
+    }
+
+    // For operating machines, the displayed status follows
+    // the ML health score so score and status always agree.
+    const score = Number(machine.health_score);
+
+    if (score < 20) {
+        return "FAULTED";
+    }
+
+    if (score < 40) {
+        return "CRITICAL";
+    }
+
+    if (score < 60) {
+        return "WARNING";
+    }
+
+    if (score < 80) {
+        return "DEGRADING";
+    }
+
+    return "HEALTHY";
+}
 
 function FleetDashboard() {
     const navigate = useNavigate();
@@ -57,23 +101,23 @@ function FleetDashboard() {
     }, []);
 
     const criticalCount = machines.filter(
-        (machine) => machine.health_status === "CRITICAL"
+        (machine) => getOperationalStatus(machine) === "CRITICAL"
     ).length;
 
     const faultedCount = machines.filter(
-        (machine) => machine.health_status === "FAULTED"
+        (machine) => getOperationalStatus(machine) === "FAULTED"
     ).length;
 
     const warningCount = machines.filter(
-        (machine) => machine.health_status === "WARNING"
+        (machine) => getOperationalStatus(machine) === "WARNING"
     ).length;
 
     const degradingCount = machines.filter(
-        (machine) => machine.health_status === "DEGRADING"
+        (machine) => getOperationalStatus(machine) === "DEGRADING"
     ).length;
 
     const healthyCount = machines.filter(
-        (machine) => machine.health_status === "HEALTHY"
+        (machine) => getOperationalStatus(machine) === "HEALTHY"
     ).length;
 
     if (error) {
@@ -167,7 +211,7 @@ function FleetDashboard() {
 
                 <div className="fleet-counts">
                     <span className="critical-count">{criticalCount} Critical</span>
-                    <span className="critical-count">{faultedCount} Faulted</span>
+                    <span className="faulted-count">{faultedCount} Faulted</span>
                     <span className="warning-count">{warningCount} Warning</span>
                     <span className="degrading-count">
                         {degradingCount} Degrading
@@ -179,7 +223,9 @@ function FleetDashboard() {
             <section className="machine-grid">
                 {machines.map((machine) => (
                     <button
-                        className={`machine-card ${machine.health_status.toLowerCase()}`}
+                        className={`machine-card ${getOperationalStatus(
+                            machine
+                        ).toLowerCase()}`}
                         key={machine.machine_id}
                         onClick={() => navigate(`/machines/${machine.machine_id}`)}
                         type="button"
@@ -191,7 +237,7 @@ function FleetDashboard() {
 
                         <h3>{machine.machine_name}</h3>
 
-                        <p>{machine.health_status}</p>
+                        <p>{getOperationalStatus(machine)}</p>
 
                         <small>
                             {machine.risk_reasons[0] ?? "No active risk indicators"}
