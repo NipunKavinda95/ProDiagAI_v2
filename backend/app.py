@@ -32,6 +32,11 @@ from services.security_service import (
 )
 from services.engineer_approval_service import process_engineer_approval
 from services.maintenance_agent_service import run_maintenance_agent
+from services.factory_settings_service import (
+    get_factory_settings,
+    initialize_factory_settings,
+    update_factory_settings,
+)
 
 app = Flask(__name__)
 
@@ -65,6 +70,7 @@ else:
     )
 
 initialize_database()
+initialize_factory_settings()
 
 latest_processed_readings = {}
 
@@ -185,6 +191,44 @@ def health_check():
             "mqtt_connected": mqtt_service.connected,
         }
     )
+
+
+@app.get("/api/settings")
+def get_settings():
+    try:
+        settings = get_factory_settings()
+
+        if settings is None:
+            return jsonify({"error": "Factory settings not found."}), 404
+
+        return jsonify(settings)
+
+    except Exception as error:
+        print(f"Could not load factory settings: {error}")
+        return jsonify({"error": "Could not load factory settings."}), 500
+
+
+@app.put("/api/settings")
+def save_settings():
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify({"error": "Request body must be a JSON object."}), 400
+
+    try:
+        settings = update_factory_settings(data)
+
+        if settings is None:
+            return jsonify({"error": "Factory settings could not be saved."}), 500
+
+        return jsonify(settings), 200
+
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+
+    except Exception as error:
+        print(f"Could not save factory settings: {error}")
+        return jsonify({"error": "Could not save factory settings."}), 500
 
 
 @app.get("/api/telemetry")
@@ -550,13 +594,25 @@ def update_work_order_status(work_order_id):
     data = request.get_json() or {}
 
     status = data.get("status")
+    engineer_name = data.get("engineer_name")
 
     if not status:
         return jsonify({"error": "Status is required"}), 400
 
+    # Completing a work order requires the engineer name so it is
+    # persisted in the database and remains available after reload.
+    if status == "COMPLETED" and not str(engineer_name or "").strip():
+        return (
+            jsonify(
+                {"error": "engineer_name is required when completing a work order"}
+            ),
+            400,
+        )
+
     work_order = work_order_service.update_status(
         work_order_id,
         status,
+        engineer_name=str(engineer_name).strip() if engineer_name else None,
     )
 
     if work_order is None:

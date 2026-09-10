@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 type SparePart = {
@@ -55,6 +55,51 @@ function WorkOrders() {
     const [statusError, setStatusError] = useState("");
 
     const [completionEngineer, setCompletionEngineer] = useState("");
+    const [filterStatus, setFilterStatus] = useState("ALL");
+
+    const openCount = workOrders.filter((item) => item.status === "OPEN").length;
+    const inProgressCount = workOrders.filter(
+        (item) => item.status === "IN_PROGRESS"
+    ).length;
+    const completedCount = workOrders.filter(
+        (item) => item.status === "COMPLETED"
+    ).length;
+    // Current maintenance cost: only OPEN and IN_PROGRESS work orders.
+    // COMPLETED work orders are historical and should not inflate the active estimate.
+    const activeWorkOrders = workOrders.filter(
+        (item) =>
+            item.status === "OPEN" ||
+            item.status === "IN_PROGRESS"
+    );
+
+    const estimatedTotal = activeWorkOrders.reduce(
+        (total, item) =>
+            total + (item.estimated_total_cost_usd ?? 0),
+        0
+    );
+
+    const filteredWorkOrders = useMemo(() => {
+        const filtered =
+            filterStatus === "ALL"
+                ? [...workOrders]
+                : workOrders.filter((item) => item.status === filterStatus);
+
+        // Completed work orders: newest completion date first.
+        if (filterStatus === "COMPLETED") {
+            return filtered.sort((a, b) => {
+                const aTime = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+                const bTime = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+
+                if (bTime !== aTime) {
+                    return bTime - aTime;
+                }
+
+                return b.work_order_id - a.work_order_id;
+            });
+        }
+
+        return filtered;
+    }, [workOrders, filterStatus]);
 
     const loadWorkOrders = async () => {
         try {
@@ -291,6 +336,127 @@ function WorkOrders() {
                 </div>
             </header>
 
+            <section
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                    gap: "14px",
+                    marginBottom: "24px",
+                }}
+            >
+                {[
+                    { label: "OPEN", value: openCount, note: "Awaiting execution" },
+                    { label: "IN PROGRESS", value: inProgressCount, note: "Currently being serviced" },
+                    { label: "COMPLETED", value: completedCount, note: "Maintenance finished" },
+                    {
+                        label: "EST. COST",
+                        value: formatMoney(estimatedTotal),
+                        note: "Across active work orders",
+                    },
+                ].map((stat) => (
+                    <article
+                        key={stat.label}
+                        className="panel"
+                        style={{
+                            padding: "18px 20px",
+                            minHeight: "92px",
+                            boxSizing: "border-box",
+                        }}
+                    >
+                        <p
+                            className="eyebrow"
+                            style={{ marginBottom: "8px" }}
+                        >
+                            {stat.label}
+                        </p>
+                        <strong
+                            style={{
+                                display: "block",
+                                fontSize: "1.65rem",
+                                color: "#f4f8ff",
+                                lineHeight: 1.1,
+                            }}
+                        >
+                            {stat.value}
+                        </strong>
+                        <span
+                            style={{
+                                display: "block",
+                                marginTop: "6px",
+                                color: "#7898b8",
+                                fontSize: "0.76rem",
+                            }}
+                        >
+                            {stat.note}
+                        </span>
+                    </article>
+                ))}
+            </section>
+
+            <section
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "16px",
+                    flexWrap: "wrap",
+                    marginBottom: "16px",
+                }}
+            >
+                <div>
+                    <p className="eyebrow" style={{ marginBottom: "4px" }}>
+                        Maintenance queue
+                    </p>
+                    <p style={{ margin: 0, color: "#9ab3d0" }}>
+                        Showing {filteredWorkOrders.length} of {workOrders.length} work order
+                        {workOrders.length !== 1 ? "s" : ""}
+                    </p>
+                </div>
+
+                <div
+                    style={{
+                        display: "flex",
+                        gap: "8px",
+                        flexWrap: "wrap",
+                    }}
+                >
+                    {["ALL", "OPEN", "IN_PROGRESS", "COMPLETED"].map(
+                        (status) => {
+                            const active = filterStatus === status;
+                            const label =
+                                status === "IN_PROGRESS"
+                                    ? "IN PROGRESS"
+                                    : status;
+
+                            return (
+                                <button
+                                    key={status}
+                                    type="button"
+                                    onClick={() => setFilterStatus(status)}
+                                    style={{
+                                        padding: "8px 12px",
+                                        borderRadius: "8px",
+                                        border: active
+                                            ? "1px solid #58d7ff"
+                                            : "1px solid #285273",
+                                        background: active
+                                            ? "rgba(20, 112, 150, 0.24)"
+                                            : "rgba(8, 25, 43, 0.58)",
+                                        color: active ? "#58d7ff" : "#9ab3d0",
+                                        cursor: "pointer",
+                                        fontSize: "0.75rem",
+                                        fontWeight: 700,
+                                        letterSpacing: "0.04em",
+                                    }}
+                                >
+                                    {label}
+                                </button>
+                            );
+                        }
+                    )}
+                </div>
+            </section>
+
             {workOrders.length === 0 ? (
                 <section className="panel">
                     <p className="eyebrow">
@@ -300,19 +466,30 @@ function WorkOrders() {
                     <h2>No work orders yet</h2>
 
                     <p>
-                        Work orders will appear here after an
-                        engineer reviews and approves a maintenance
-                        proposal.
+                        Work orders will appear here after an engineer
+                        reviews and approves a maintenance proposal.
+                    </p>
+                </section>
+            ) : filteredWorkOrders.length === 0 ? (
+                <section className="panel">
+                    <p className="eyebrow">
+                        No matching work orders
+                    </p>
+
+                    <h2>No {filterStatus.toLowerCase().replace("_", " ")} work orders</h2>
+
+                    <p>
+                        Change the filter above to view another maintenance state.
                     </p>
                 </section>
             ) : (
                 <section
                     style={{
                         display: "grid",
-                        gap: "12px",
+                        gap: "14px",
                     }}
                 >
-                    {workOrders.map((workOrder) => (
+                    {filteredWorkOrders.map((workOrder) => (
                         <article
                             className="panel"
                             key={workOrder.work_order_id}
@@ -321,33 +498,59 @@ function WorkOrders() {
                             }
                             style={{
                                 cursor: "pointer",
-                                padding: "18px 22px",
+                                padding: "20px 22px",
+                                borderColor:
+                                    workOrder.priority === "CRITICAL"
+                                        ? "rgba(255, 96, 116, 0.42)"
+                                        : undefined,
                             }}
                         >
                             <div
                                 style={{
                                     display: "flex",
-                                    justifyContent:
-                                        "space-between",
-                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    alignItems: "flex-start",
                                     gap: "18px",
                                 }}
                             >
                                 <div style={{ minWidth: 0 }}>
-                                    <p
-                                        className="eyebrow"
+                                    <div
                                         style={{
-                                            marginBottom: "5px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "10px",
+                                            flexWrap: "wrap",
+                                            marginBottom: "7px",
                                         }}
                                     >
-                                        Work Order #
-                                        {workOrder.work_order_id}
-                                    </p>
+                                        <span
+                                            className="eyebrow"
+                                            style={{ margin: 0 }}
+                                        >
+                                            WO #{workOrder.work_order_id}
+                                        </span>
+                                        <span
+                                            style={{
+                                                width: "6px",
+                                                height: "6px",
+                                                borderRadius: "50%",
+                                                background: "#58d7ff",
+                                            }}
+                                        />
+                                        <span
+                                            style={{
+                                                color: "#7898b8",
+                                                fontSize: "0.76rem",
+                                            }}
+                                        >
+                                            {formatDate(workOrder.created_at)}
+                                        </span>
+                                    </div>
 
                                     <h2
                                         style={{
                                             margin: "0 0 5px",
-                                            fontSize: "1.15rem",
+                                            fontSize: "1.18rem",
                                         }}
                                     >
                                         {workOrder.title}
@@ -359,8 +562,7 @@ function WorkOrders() {
                                             color: "#9ab3d0",
                                         }}
                                     >
-                                        {workOrder.machine_name} ·{" "}
-                                        {workOrder.machine_id}
+                                        {workOrder.machine_name} · {workOrder.machine_id}
                                     </p>
                                 </div>
 
@@ -369,21 +571,14 @@ function WorkOrders() {
                                         display: "flex",
                                         gap: "8px",
                                         flexWrap: "wrap",
+                                        justifyContent: "flex-end",
                                     }}
                                 >
-                                    <span
-                                        className={getPriorityClass(
-                                            workOrder.priority
-                                        )}
-                                    >
+                                    <span className={getPriorityClass(workOrder.priority)}>
                                         {workOrder.priority}
                                     </span>
 
-                                    <span
-                                        className={getStatusClass(
-                                            workOrder.status
-                                        )}
-                                    >
+                                    <span className={getStatusClass(workOrder.status)}>
                                         {workOrder.status}
                                     </span>
                                 </div>
@@ -391,55 +586,87 @@ function WorkOrders() {
 
                             <div
                                 style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "20px",
-                                    flexWrap: "wrap",
-                                    marginTop: "12px",
-                                    fontSize: "0.85rem",
-                                    color: "#8fa8c4",
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                                    gap: "10px",
+                                    marginTop: "18px",
                                 }}
                             >
-                                <span>
-                                    Fault:{" "}
-                                    <strong>
-                                        {workOrder.fault_type ??
-                                            "Not specified"}
-                                    </strong>
-                                </span>
+                                {[
+                                    ["FAULT", workOrder.fault_type ?? "Not specified"],
+                                    ["ALERT", workOrder.alert_id ?? "—"],
+                                    ["EVENT", workOrder.fault_event_id ?? "—"],
+                                    ["EST. TOTAL", formatMoney(workOrder.estimated_total_cost_usd)],
+                                ].map(([label, value]) => (
+                                    <div
+                                        key={label}
+                                        style={{
+                                            padding: "11px 12px",
+                                            borderRadius: "8px",
+                                            border: "1px solid rgba(40, 82, 115, 0.55)",
+                                            background: "rgba(8, 25, 43, 0.42)",
+                                            minWidth: 0,
+                                        }}
+                                    >
+                                        <span
+                                            style={{
+                                                display: "block",
+                                                color: "#6688aa",
+                                                fontSize: "0.67rem",
+                                                fontWeight: 700,
+                                                letterSpacing: "0.12em",
+                                                marginBottom: "5px",
+                                            }}
+                                        >
+                                            {label}
+                                        </span>
+                                        <strong
+                                            style={{
+                                                display: "block",
+                                                color: label === "EST. TOTAL" ? "#7ee7c7" : "#dcecff",
+                                                fontSize: "0.82rem",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                whiteSpace: "nowrap",
+                                            }}
+                                        >
+                                            {value}
+                                        </strong>
+                                    </div>
+                                ))}
+                            </div>
 
-                                <span>
-                                    Alert:{" "}
-                                    <strong>
-                                        {workOrder.alert_id ?? "—"}
-                                    </strong>
-                                </span>
-
-                                <span>
-                                    Event:{" "}
-                                    <strong>
-                                        {workOrder.fault_event_id ??
-                                            "—"}
-                                    </strong>
-                                </span>
-
-                                <span>
-                                    Created:{" "}
-                                    <strong>
-                                        {formatDate(
-                                            workOrder.created_at
-                                        )}
-                                    </strong>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    gap: "12px",
+                                    flexWrap: "wrap",
+                                    marginTop: "14px",
+                                    paddingTop: "13px",
+                                    borderTop: "1px solid rgba(40, 82, 115, 0.45)",
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        color: "#7898b8",
+                                        fontSize: "0.78rem",
+                                    }}
+                                >
+                                    {workOrder.spare_parts?.length ?? 0} spare part
+                                    {(workOrder.spare_parts?.length ?? 0) !== 1 ? "s" : ""}
+                                    {workOrder.approval_status ? ` · ${workOrder.approval_status}` : ""}
                                 </span>
 
                                 <span
                                     style={{
-                                        marginLeft: "auto",
                                         color: "#58d7ff",
-                                        fontWeight: 600,
+                                        fontWeight: 700,
+                                        fontSize: "0.78rem",
                                     }}
                                 >
-                                    View Details →
+                                    VIEW DETAILS →
                                 </span>
                             </div>
                         </article>

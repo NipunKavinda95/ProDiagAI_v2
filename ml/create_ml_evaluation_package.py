@@ -8,6 +8,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -32,6 +33,7 @@ REPORTS_DIR = EVALUATION_DIR / "reports"
 
 PDF_PATH = EVALUATION_DIR / "ProDiag_AI_V2_ML_Evaluation_Report.pdf"
 MANIFEST_PATH = EVALUATION_DIR / "evaluation_manifest.json"
+LOGO_PATH = BASE_DIR / "logo.png"
 
 
 # ============================================================
@@ -166,13 +168,64 @@ body_style = ParagraphStyle(
 # PDF DOCUMENT
 # ============================================================
 
+
+def draw_report_header_footer(canvas, doc):
+    """Draw the ProDiag AI header and author/date footer on every page."""
+    canvas.saveState()
+
+    page_width, page_height = A4
+
+    # --------------------------------------------------------
+    # Header — ProDiag AI logo
+    # --------------------------------------------------------
+    if LOGO_PATH.exists():
+        try:
+            logo = ImageReader(str(LOGO_PATH))
+            logo_width = 150
+            logo_height = 35
+            canvas.drawImage(
+                logo,
+                40,
+                page_height - 47,
+                width=logo_width,
+                height=logo_height,
+                preserveAspectRatio=True,
+                mask="auto",
+                anchor="sw",
+            )
+        except Exception as exc:
+            print(f"[WARNING] Could not draw report logo: {exc}")
+
+    # Subtle header divider
+    canvas.setStrokeColor(colors.HexColor("#D9E2EC"))
+    canvas.setLineWidth(0.5)
+    canvas.line(40, page_height - 55, page_width - 40, page_height - 55)
+
+    # --------------------------------------------------------
+    # Footer — author left / current date right
+    # --------------------------------------------------------
+    canvas.setStrokeColor(colors.HexColor("#D9E2EC"))
+    canvas.line(40, 34, page_width - 40, 34)
+
+    canvas.setFont("Helvetica", 7.5)
+    canvas.setFillColor(colors.HexColor("#627D98"))
+    canvas.drawString(40, 21, "Nipun Kavinda")
+
+    report_date = datetime.now().strftime("%d %B %Y")
+    date_text = report_date
+    date_width = canvas.stringWidth(date_text, "Helvetica", 7.5)
+    canvas.drawString(page_width - 40 - date_width, 21, date_text)
+
+    canvas.restoreState()
+
+
 doc = SimpleDocTemplate(
     str(PDF_PATH),
     pagesize=A4,
     rightMargin=40,
     leftMargin=40,
-    topMargin=40,
-    bottomMargin=40,
+    topMargin=68,
+    bottomMargin=48,
 )
 
 story = []
@@ -304,27 +357,157 @@ if failure_df is not None:
     for column in display_df.select_dtypes(include="number").columns:
         display_df[column] = display_df[column].round(4)
 
-    table_data = [display_df.columns.tolist()] + display_df.values.tolist()
+    # Keep the classification table inside the A4 content width.
+    # Seven columns cannot fit at 100 pt each (700 pt > A4 content width).
+    # Paragraph cells also allow long metric headers to wrap cleanly.
+    header_style = ParagraphStyle(
+        "TableHeader",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=6.5,
+        leading=8,
+        alignment=TA_CENTER,
+    )
+    cell_style = ParagraphStyle(
+        "TableCell",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=7,
+        leading=8.5,
+        alignment=TA_CENTER,
+    )
+
+    table_data = [
+        [Paragraph(str(column).upper(), header_style) for column in display_df.columns]
+    ]
+
+    for row in display_df.itertuples(index=False, name=None):
+        table_data.append([Paragraph(str(value), cell_style) for value in row])
+
+    # Model + six evaluation metrics.
+    classification_widths = [92, 61, 61, 61, 61, 89, 89]
 
     table = Table(
         table_data,
         repeatRows=1,
-        colWidths=[100] * len(display_df.columns),
+        colWidths=classification_widths,
+        hAlign="LEFT",
     )
 
     table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D9E2EC")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#102A43")),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 7),
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#9AA5B1")),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (1, 1), (-1, -1), "CENTER"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                (
+                    "ROWBACKGROUNDS",
+                    (0, 1),
+                    (-1, -1),
+                    [colors.white, colors.HexColor("#F7F9FC")],
+                ),
             ]
         )
     )
 
     story.append(table)
+
+    # Compact engineering KPI strip for the selected failure model.
+    # This gives Section 2 a visual summary without duplicating the full
+    # model-comparison chart that appears later in the report.
+    try:
+        xgb_row = display_df[
+            display_df.astype(str).apply(
+                lambda row: row.str.contains("XGBoost", case=False, regex=False).any(),
+                axis=1,
+            )
+        ].iloc[0]
+
+        def _metric_value(column_name):
+            return str(xgb_row[column_name])
+
+        kpi_header = Paragraph(
+            "<b>FAILURE MODEL — XGBOOST</b>",
+            ParagraphStyle(
+                "KpiHeader",
+                parent=styles["Normal"],
+                fontSize=7,
+                leading=8,
+                textColor=colors.HexColor("#486581"),
+                alignment=TA_CENTER,
+            ),
+        )
+
+        kpi_labels = ["F1 SCORE", "RECALL", "ROC AUC", "PR AUC"]
+        kpi_columns = ["f1", "recall", "roc_auc", "pr_auc"]
+
+        kpi_values = [
+            Paragraph(
+                f"<b>{_metric_value(column)}</b>",
+                ParagraphStyle(
+                    f"KpiValue{index}",
+                    parent=styles["Normal"],
+                    fontSize=13,
+                    leading=15,
+                    textColor=colors.HexColor("#102A43"),
+                    alignment=TA_CENTER,
+                ),
+            )
+            for index, column in enumerate(kpi_columns)
+        ]
+
+        kpi_labels_row = [
+            Paragraph(
+                label,
+                ParagraphStyle(
+                    f"KpiLabel{index}",
+                    parent=styles["Normal"],
+                    fontSize=6.5,
+                    leading=8,
+                    textColor=colors.HexColor("#627D98"),
+                    alignment=TA_CENTER,
+                ),
+            )
+            for index, label in enumerate(kpi_labels)
+        ]
+
+        kpi_table = Table(
+            [
+                [kpi_header, "", "", ""],
+                kpi_labels_row,
+                kpi_values,
+            ],
+            colWidths=[121, 121, 121, 121],
+            rowHeights=[20, 14, 25],
+            hAlign="LEFT",
+        )
+
+        kpi_table.setStyle(
+            TableStyle(
+                [
+                    ("SPAN", (0, 0), (-1, 0)),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F4F8FC")),
+                    ("BOX", (0, 0), (-1, -1), 0.7, colors.HexColor("#BCCCDC")),
+                    ("INNERGRID", (0, 1), (-1, -1), 0.4, colors.HexColor("#D9E2EC")),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                ]
+            )
+        )
+
+        story.append(Spacer(1, 10))
+        story.append(kpi_table)
+
+    except Exception as exc:
+        print(f"[WARNING] Could not create failure KPI strip: {exc}")
 
 story.append(Spacer(1, 15))
 
@@ -570,7 +753,11 @@ for figure_name in preferred_figures:
 # BUILD PDF
 # ============================================================
 
-doc.build(story)
+doc.build(
+    story,
+    onFirstPage=draw_report_header_footer,
+    onLaterPages=draw_report_header_footer,
+)
 
 
 # ============================================================

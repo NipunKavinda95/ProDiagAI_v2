@@ -1,0 +1,7 @@
+test_id,question,results_returned,top_similarity,average_similarity,sources,retrieval_pass,error
+RAG-01,What are the typical indicators of bearing wear?,5,0.7044,0.6517,bearing_failure_modes.md,True,
+RAG-02,What should an engineer inspect when machine vibration is elevated?,5,0.6553,0.6375,bearing_failure_modes.md | industry_standards.md,True,
+RAG-03,What maintenance actions are recommended for bearing degradation?,5,0.6917,0.6335,bearing_failure_modes.md,True,
+RAG-04,What spare part information is available for maintenance?,5,0.5477,0.5315,maintenance_manual_reference.md | fault_codes.md,True,
+RAG-05,What maintenance safety procedures should be considered before servicing equipment?,5,0.6247,0.6138,fault_codes.md | maintenance_sop.md | maintenance_manual_reference.md,True,
+RAG-06,What engineering standards or operating limits are relevant to vibration monitoring?,5,0.6328,0.5643,industry_standards.md | bearing_failure_modes.md | maintenance_manual_reference.md,True,

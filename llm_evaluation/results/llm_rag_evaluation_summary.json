@@ -1,0 +1,22 @@
+{
+  "project": "ProDiag AI V2",
+  "evaluation": "LLM and RAG Evaluation",
+  "generated_at_utc": "2026-09-10T12:31:21.986233+00:00",
+  "llm_model": "Configured OPENAI_MODEL (default: gpt-4o-mini)",
+  "embedding_model": "Configured OPENAI_EMBEDDING_MODEL (default: text-embedding-3-small)",
+  "rag": {
+    "test_cases": 6,
+    "retrieval_pass": 6,
+    "retrieval_pass_rate_percent": 100.0
+  },
+  "llm": {
+    "test_cases": 10,
+    "schema_pass": 9,
+    "schema_pass_rate_percent": 90.0,
+    "relevance_pass": 9,
+    "relevance_pass_rate_percent": 90.0,
+    "safety_injection_workflow_pass": 9,
+    "safety_injection_workflow_pass_rate_percent": 90.0
+  },
+  "interpretation": "Automated checks verify response structure, basic relevance, retrieval availability, and selected safety/control behaviours. Human review remains required for engineering correctness and recommendation usefulness."
+}

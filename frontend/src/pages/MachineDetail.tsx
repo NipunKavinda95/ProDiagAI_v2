@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import jsPDF from "jspdf";
 import {
@@ -6,6 +6,7 @@ import {
     Line,
     LineChart,
     ResponsiveContainer,
+    ReferenceLine,
     Tooltip,
     XAxis,
     YAxis,
@@ -853,13 +854,53 @@ function MachineDetail() {
         );
     };
 
+    type SensorMetric = "temperature_c" | "vibration_mm_s" | "current_a" | "rpm";
+
+    const [sensorMetric, setSensorMetric] = useState<SensorMetric>(
+        "temperature_c"
+    );
+
     const chartData = history.map((reading) => ({
         time: new Date(reading.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
         }),
-        health_score: reading.health_score,
+        fullTime: new Date(reading.timestamp).toLocaleString(),
+        health_score: Number(reading.health_score),
+        temperature_c: Number(reading.temperature_c),
+        vibration_mm_s: Number(reading.vibration_mm_s),
+        current_a: Number(reading.current_a),
+        rpm: Number(reading.rpm),
     }));
+
+    const sensorConfig: Record<
+        SensorMetric,
+        { label: string; unit: string; decimals: number }
+    > = {
+        temperature_c: { label: "Temperature", unit: "°C", decimals: 1 },
+        vibration_mm_s: { label: "Vibration", unit: "mm/s", decimals: 2 },
+        current_a: { label: "Current", unit: "A", decimals: 2 },
+        rpm: { label: "Speed", unit: "RPM", decimals: 0 },
+    };
+
+    const selectedSensor = sensorConfig[sensorMetric];
+
+    const sensorStats = useMemo(() => {
+        const values = history
+            .map((reading) => Number(reading[sensorMetric]))
+            .filter((value) => Number.isFinite(value));
+
+        if (!values.length) {
+            return { min: 0, max: 0, avg: 0 };
+        }
+
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+
+        return { min, max, avg };
+    }, [history, sensorMetric]);
 
     if (error) {
         return (
@@ -1622,62 +1663,381 @@ function MachineDetail() {
                 </article>
             </section>
 
-            <section className="trend-panel">
-                <p className="eyebrow">
-                    Condition trend
-                </p>
+            <section
+                className="trend-panel machine-analytics-panel"
+                style={{
+                    marginTop: "24px",
+                    padding: "24px",
+                    border: "1px solid #1d3b57",
+                    borderRadius: "16px",
+                    background: "linear-gradient(145deg, #0b182a 0%, #081522 100%)",
+                }}
+            >
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-end",
+                        gap: "20px",
+                        flexWrap: "wrap",
+                        marginBottom: "20px",
+                    }}
+                >
+                    <div>
+                        <p className="eyebrow" style={{ marginBottom: "6px" }}>
+                            Engineering analytics
+                        </p>
+                        <h2 style={{ marginBottom: "6px" }}>
+                            Condition & Sensor Trends
+                        </h2>
+                        <p
+                            style={{
+                                margin: 0,
+                                color: "#7189a5",
+                                fontSize: "13px",
+                            }}
+                        >
+                            40 latest readings · live history refreshes every 5 seconds
+                        </p>
+                    </div>
 
-                <h2>
-                    Health score history
-                </h2>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "5px",
+                            borderRadius: "10px",
+                            border: "1px solid #285273",
+                            background: "#071421",
+                        }}
+                    >
+                        {(Object.keys(sensorConfig) as SensorMetric[]).map((metric) => (
+                            <button
+                                key={metric}
+                                type="button"
+                                onClick={() => setSensorMetric(metric)}
+                                style={{
+                                    border: sensorMetric === metric
+                                        ? "1px solid #52d5ff"
+                                        : "1px solid transparent",
+                                    background: sensorMetric === metric
+                                        ? "#102d45"
+                                        : "transparent",
+                                    color: sensorMetric === metric
+                                        ? "#ffffff"
+                                        : "#8ea9c5",
+                                    padding: "8px 11px",
+                                    borderRadius: "7px",
+                                    fontSize: "12px",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                }}
+                            >
+                                {sensorConfig[metric].label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
                 <div
                     style={{
-                        width: "100%",
-                        height: 280,
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+                        gap: "18px",
                     }}
                 >
-                    <ResponsiveContainer>
-                        <LineChart data={chartData}>
-                            <CartesianGrid
-                                stroke="#244866"
-                                strokeDasharray="3 3"
-                            />
-
-                            <XAxis
-                                dataKey="time"
-                                stroke="#9ab3d0"
-                                tick={{
-                                    fontSize: 11,
-                                }}
-                            />
-
-                            <YAxis
-                                domain={[0, 100]}
-                                stroke="#9ab3d0"
-                                tick={{
-                                    fontSize: 11,
-                                }}
-                            />
-
-                            <Tooltip
-                                contentStyle={{
-                                    background: "#0b182a",
+                    <article
+                        style={{
+                            minWidth: 0,
+                            padding: "18px",
+                            borderRadius: "12px",
+                            border: "1px solid #1d3b57",
+                            background: "#071421",
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                gap: "12px",
+                                marginBottom: "8px",
+                            }}
+                        >
+                            <div>
+                                <span
+                                    style={{
+                                        display: "block",
+                                        color: "#7189a5",
+                                        fontSize: "11px",
+                                        fontWeight: 700,
+                                        letterSpacing: "0.12em",
+                                        textTransform: "uppercase",
+                                    }}
+                                >
+                                    Health condition
+                                </span>
+                                <strong style={{ fontSize: "17px" }}>
+                                    Health Score History
+                                </strong>
+                            </div>
+                            <span
+                                style={{
+                                    padding: "6px 9px",
+                                    borderRadius: "7px",
+                                    background: "#10263b",
                                     border: "1px solid #285273",
-                                    borderRadius: "10px",
+                                    color: "#52d5ff",
+                                    fontSize: "11px",
+                                    fontWeight: 700,
                                 }}
-                            />
+                            >
+                                0–100
+                            </span>
+                        </div>
 
-                            <Line
-                                type="monotone"
-                                dataKey="health_score"
-                                stroke="#52d5ff"
-                                strokeWidth={3}
-                                dot={false}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
+                        <div style={{ width: "100%", height: 290 }}>
+                            <ResponsiveContainer>
+                                <LineChart
+                                    data={chartData}
+                                    margin={{ top: 12, right: 8, left: -12, bottom: 4 }}
+                                >
+                                    <CartesianGrid
+                                        stroke="#19364f"
+                                        strokeDasharray="3 4"
+                                        vertical={false}
+                                    />
+                                    <XAxis
+                                        dataKey="time"
+                                        stroke="#6f8ba8"
+                                        tick={{ fontSize: 10 }}
+                                        tickLine={false}
+                                        axisLine={{ stroke: "#285273" }}
+                                        minTickGap={28}
+                                    />
+                                    <YAxis
+                                        domain={[0, 100]}
+                                        stroke="#6f8ba8"
+                                        tick={{ fontSize: 10 }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <ReferenceLine y={80} stroke="#7ee2a8" strokeDasharray="5 5" />
+                                    <ReferenceLine y={60} stroke="#f6c85f" strokeDasharray="5 5" />
+                                    <ReferenceLine y={40} stroke="#ff9f43" strokeDasharray="5 5" />
+                                    <Tooltip
+                                        labelFormatter={(_, payload) =>
+                                            payload?.[0]?.payload?.fullTime || ""
+                                        }
+                                        formatter={(value) => [
+                                            `${Number(value ?? 0).toFixed(2)} / 100`,
+                                            "Health Score",
+                                        ]}
+                                        contentStyle={{
+                                            background: "#081522",
+                                            border: "1px solid #285273",
+                                            borderRadius: "10px",
+                                            color: "#ffffff",
+                                            boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+                                        }}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="health_score"
+                                        stroke="#52d5ff"
+                                        strokeWidth={3}
+                                        dot={false}
+                                        activeDot={{ r: 5, strokeWidth: 2, fill: "#081522" }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: "14px",
+                                flexWrap: "wrap",
+                                marginTop: "2px",
+                                color: "#7189a5",
+                                fontSize: "11px",
+                            }}
+                        >
+                            <span>— Healthy ≥ 80</span>
+                            <span>— Degrading 60–79</span>
+                            <span>— Warning 40–59</span>
+                        </div>
+                    </article>
+
+                    <article
+                        style={{
+                            minWidth: 0,
+                            padding: "18px",
+                            borderRadius: "12px",
+                            border: "1px solid #1d3b57",
+                            background: "#071421",
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                gap: "12px",
+                                marginBottom: "8px",
+                            }}
+                        >
+                            <div>
+                                <span
+                                    style={{
+                                        display: "block",
+                                        color: "#7189a5",
+                                        fontSize: "11px",
+                                        fontWeight: 700,
+                                        letterSpacing: "0.12em",
+                                        textTransform: "uppercase",
+                                    }}
+                                >
+                                    Sensor telemetry
+                                </span>
+                                <strong style={{ fontSize: "17px" }}>
+                                    {selectedSensor.label} Trend
+                                </strong>
+                            </div>
+                            <span
+                                style={{
+                                    color: "#7ee2a8",
+                                    fontSize: "13px",
+                                    fontWeight: 800,
+                                }}
+                            >
+                                {Number(machine[sensorMetric]).toFixed(selectedSensor.decimals)} {selectedSensor.unit}
+                            </span>
+                        </div>
+
+                        <div style={{ width: "100%", height: 290 }}>
+                            <ResponsiveContainer>
+                                <LineChart
+                                    data={chartData}
+                                    margin={{ top: 12, right: 8, left: -12, bottom: 4 }}
+                                >
+                                    <CartesianGrid
+                                        stroke="#19364f"
+                                        strokeDasharray="3 4"
+                                        vertical={false}
+                                    />
+                                    <XAxis
+                                        dataKey="time"
+                                        stroke="#6f8ba8"
+                                        tick={{ fontSize: 10 }}
+                                        tickLine={false}
+                                        axisLine={{ stroke: "#285273" }}
+                                        minTickGap={28}
+                                    />
+                                    <YAxis
+                                        stroke="#6f8ba8"
+                                        tick={{ fontSize: 10 }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        width={48}
+                                    />
+                                    <ReferenceLine
+                                        y={sensorStats.avg}
+                                        stroke="#7189a5"
+                                        strokeDasharray="6 4"
+                                    />
+                                    <Tooltip
+                                        labelFormatter={(_, payload) =>
+                                            payload?.[0]?.payload?.fullTime || ""
+                                        }
+                                        formatter={(value) => [
+                                            `${Number(value ?? 0).toFixed(selectedSensor.decimals)} ${selectedSensor.unit}`,
+                                            selectedSensor.label,
+                                        ]}
+                                        contentStyle={{
+                                            background: "#081522",
+                                            border: "1px solid #285273",
+                                            borderRadius: "10px",
+                                            color: "#ffffff",
+                                            boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+                                        }}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey={sensorMetric}
+                                        stroke="#7ee2a8"
+                                        strokeWidth={2.5}
+                                        dot={false}
+                                        activeDot={{ r: 5, strokeWidth: 2, fill: "#081522" }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+
+                        <div
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                                gap: "8px",
+                                marginTop: "2px",
+                            }}
+                        >
+                            {[
+                                ["MIN", sensorStats.min],
+                                ["AVG", sensorStats.avg],
+                                ["MAX", sensorStats.max],
+                            ].map(([label, value]) => (
+                                <div
+                                    key={label as string}
+                                    style={{
+                                        padding: "8px 10px",
+                                        borderRadius: "8px",
+                                        background: "#0b182a",
+                                        border: "1px solid #19364f",
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            display: "block",
+                                            color: "#7189a5",
+                                            fontSize: "9px",
+                                            fontWeight: 800,
+                                            letterSpacing: "0.1em",
+                                        }}
+                                    >
+                                        {label}
+                                    </span>
+                                    <strong style={{ fontSize: "13px" }}>
+                                        {Number(value).toFixed(selectedSensor.decimals)} {selectedSensor.unit}
+                                    </strong>
+                                </div>
+                            ))}
+                        </div>
+                    </article>
                 </div>
+
+                <div
+                    style={{
+                        marginTop: "14px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        color: "#7189a5",
+                        fontSize: "11px",
+                    }}
+                >
+                    <span className="live-dot" />
+                    Live telemetry · Historical engineering trend · Machine ID: {machine.machine_id}
+                </div>
+
+                <style>{`
+                    @media (max-width: 900px) {
+                        .machine-analytics-panel > div:nth-child(2) {
+                            grid-template-columns: 1fr !important;
+                        }
+                    }
+                `}</style>
             </section>
 
             {aiDiagnosis && aiModalOpen && (

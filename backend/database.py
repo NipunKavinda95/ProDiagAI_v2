@@ -13,13 +13,20 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
+# ============================================================
+# DATABASE CONFIGURATION
+# ============================================================
+
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE_URL = f"sqlite:///{BASE_DIR / 'prodiag.db'}"
 
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False, "timeout": 30},
+    connect_args={
+        "check_same_thread": False,
+        "timeout": 30,
+    },
 )
 
 
@@ -36,28 +43,58 @@ def configure_sqlite(connection, record):
 SessionLocal = sessionmaker(bind=engine)
 
 
+# ============================================================
+# BASE
+# ============================================================
+
+
 class Base(DeclarativeBase):
     pass
+
+
+# ============================================================
+# SENSOR READINGS
+# ============================================================
 
 
 class SensorReading(Base):
     __tablename__ = "sensor_readings"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+    )
 
-    machine_id: Mapped[str] = mapped_column(String(50), index=True)
-    machine_name: Mapped[str] = mapped_column(String(150))
-    timestamp: Mapped[str] = mapped_column(String(50), index=True)
+    machine_id: Mapped[str] = mapped_column(
+        String(50),
+        index=True,
+    )
+
+    machine_name: Mapped[str] = mapped_column(
+        String(150),
+    )
+
+    timestamp: Mapped[str] = mapped_column(
+        String(50),
+        index=True,
+    )
 
     temperature_c: Mapped[float] = mapped_column(Float)
     vibration_mm_s: Mapped[float] = mapped_column(Float)
     current_a: Mapped[float] = mapped_column(Float)
     rpm: Mapped[float] = mapped_column(Float)
 
-    status: Mapped[str] = mapped_column(String(30))
+    status: Mapped[str] = mapped_column(
+        String(30),
+    )
 
-    health_score: Mapped[int] = mapped_column(Integer)
-    health_status: Mapped[str] = mapped_column(String(30))
+    health_score: Mapped[int] = mapped_column(
+        Integer,
+    )
+
+    health_status: Mapped[str] = mapped_column(
+        String(30),
+    )
 
     # --------------------------------------------------------
     # ML PREDICTIONS
@@ -79,21 +116,61 @@ class SensorReading(Base):
     )
 
 
+# ============================================================
+# ALERTS
+# ============================================================
+
+
 class Alert(Base):
     __tablename__ = "alerts"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
-    machine_id = Column(String, nullable=False, index=True)
-    machine_name = Column(String, nullable=False)
+    machine_id = Column(
+        String,
+        nullable=False,
+        index=True,
+    )
 
-    severity = Column(String, nullable=False)
-    condition = Column(String, nullable=False)
-    status = Column(String, nullable=False, default="OPEN")
+    machine_name = Column(
+        String,
+        nullable=False,
+    )
 
-    fault_type = Column(String, nullable=True)
-    reasons = Column(Text, nullable=True)
-    anomaly_score = Column(Float, nullable=True)
+    severity = Column(
+        String,
+        nullable=False,
+    )
+
+    condition = Column(
+        String,
+        nullable=False,
+    )
+
+    status = Column(
+        String,
+        nullable=False,
+        default="OPEN",
+    )
+
+    fault_type = Column(
+        String,
+        nullable=True,
+    )
+
+    reasons = Column(
+        Text,
+        nullable=True,
+    )
+
+    anomaly_score = Column(
+        Float,
+        nullable=True,
+    )
 
     # --------------------------------------------------------
     # ML PREDICTIONS
@@ -109,71 +186,220 @@ class Alert(Base):
         nullable=True,
     )
 
-    created_at = Column(String, nullable=False)
-    last_seen = Column(String, nullable=False)
-    resolved_at = Column(String, nullable=True)
+    created_at = Column(
+        String,
+        nullable=False,
+    )
+
+    last_seen = Column(
+        String,
+        nullable=False,
+    )
+
+    resolved_at = Column(
+        String,
+        nullable=True,
+    )
+
+
+# ============================================================
+# FAULT EVENTS
+# ============================================================
 
 
 class FaultEvent(Base):
     __tablename__ = "fault_events"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
-    machine_id = Column(String, nullable=False, index=True)
-    machine_name = Column(String, nullable=False)
+    machine_id = Column(
+        String,
+        nullable=False,
+        index=True,
+    )
 
-    previous_condition = Column(String, nullable=True)
-    new_condition = Column(String, nullable=False)
+    machine_name = Column(
+        String,
+        nullable=False,
+    )
 
-    fault_type = Column(String, nullable=True)
-    reason = Column(String, nullable=True)
+    previous_condition = Column(
+        String,
+        nullable=True,
+    )
 
-    timestamp = Column(String, nullable=False)
+    new_condition = Column(
+        String,
+        nullable=False,
+    )
+
+    fault_type = Column(
+        String,
+        nullable=True,
+    )
+
+    reason = Column(
+        String,
+        nullable=True,
+    )
+
+    timestamp = Column(
+        String,
+        nullable=False,
+    )
+
+
+# ============================================================
+# WORK ORDERS
+# ============================================================
 
 
 class WorkOrder(Base):
     __tablename__ = "work_orders"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
 
-    machine_id = Column(String, nullable=False, index=True)
-    machine_name = Column(String, nullable=False)
+    machine_id = Column(
+        String,
+        nullable=False,
+        index=True,
+    )
 
-    status = Column(String, nullable=False, default="OPEN")
-    priority = Column(String, nullable=False, default="MEDIUM")
+    machine_name = Column(
+        String,
+        nullable=False,
+    )
 
-    fault_type = Column(String, nullable=True)
-    fault_event_id = Column(Integer, nullable=True)
-    alert_id = Column(Integer, nullable=True)
+    status = Column(
+        String,
+        nullable=False,
+        default="OPEN",
+    )
 
-    title = Column(String, nullable=False)
-    description = Column(Text, nullable=True)
+    priority = Column(
+        String,
+        nullable=False,
+        default="MEDIUM",
+    )
 
-    ai_diagnosis = Column(Text, nullable=True)
-    ai_recommendation = Column(Text, nullable=True)
+    fault_type = Column(
+        String,
+        nullable=True,
+    )
+
+    fault_event_id = Column(
+        Integer,
+        nullable=True,
+    )
+
+    alert_id = Column(
+        Integer,
+        nullable=True,
+    )
+
+    title = Column(
+        String,
+        nullable=False,
+    )
+
+    description = Column(
+        Text,
+        nullable=True,
+    )
+
+    ai_diagnosis = Column(
+        Text,
+        nullable=True,
+    )
+
+    ai_recommendation = Column(
+        Text,
+        nullable=True,
+    )
 
     # --------------------------------------------------------
     # MAINTENANCE DETAILS
     # --------------------------------------------------------
 
-    spare_parts = Column(Text, nullable=True)
+    spare_parts = Column(
+        Text,
+        nullable=True,
+    )
 
-    parts_cost_usd = Column(Float, nullable=True)
-    labour_cost_usd = Column(Float, nullable=True)
-    estimated_total_cost_usd = Column(Float, nullable=True)
+    parts_cost_usd = Column(
+        Float,
+        nullable=True,
+    )
+
+    labour_cost_usd = Column(
+        Float,
+        nullable=True,
+    )
+
+    estimated_total_cost_usd = Column(
+        Float,
+        nullable=True,
+    )
 
     # --------------------------------------------------------
     # ENGINEER APPROVAL
     # --------------------------------------------------------
 
-    approval_status = Column(String, nullable=True)
-    engineer_name = Column(String, nullable=True)
-    approval_comment = Column(Text, nullable=True)
-    approved_at = Column(String, nullable=True)
+    approval_status = Column(
+        String,
+        nullable=True,
+    )
 
-    created_at = Column(String, nullable=False)
-    updated_at = Column(String, nullable=False)
-    completed_at = Column(String, nullable=True)
+    engineer_name = Column(
+        String,
+        nullable=True,
+    )
+
+    approval_comment = Column(
+        Text,
+        nullable=True,
+    )
+
+    approved_at = Column(
+        String,
+        nullable=True,
+    )
+
+    # --------------------------------------------------------
+    # WORK ORDER EXECUTION
+    # --------------------------------------------------------
+
+    completed_at = Column(
+        String,
+        nullable=True,
+    )
+
+    completed_by = Column(
+        String,
+        nullable=True,
+    )
+
+    # --------------------------------------------------------
+    # TIMESTAMPS
+    # --------------------------------------------------------
+
+    created_at = Column(
+        String,
+        nullable=False,
+    )
+
+    updated_at = Column(
+        String,
+        nullable=False,
+    )
 
 
 # ============================================================
@@ -183,9 +409,10 @@ class WorkOrder(Base):
 
 def migrate_database():
     """
-    Safely add new ML columns to an existing SQLite database.
+    Safely add new columns to existing SQLite databases.
 
     Existing data is preserved.
+
     Running this function multiple times is safe.
     """
 
@@ -208,6 +435,10 @@ def migrate_database():
             "engineer_name": "VARCHAR",
             "approval_comment": "TEXT",
             "approved_at": "VARCHAR",
+            # ------------------------------------------------
+            # NEW
+            # ------------------------------------------------
+            "completed_by": "VARCHAR",
         },
     }
 
@@ -233,6 +464,11 @@ def migrate_database():
                     print(f"[DB MIGRATION] Added " f"{table_name}.{column_name}")
 
 
+# ============================================================
+# DATABASE INITIALIZATION
+# ============================================================
+
+
 def initialize_database():
     """
     Create missing tables and apply database migrations.
@@ -241,6 +477,11 @@ def initialize_database():
     Base.metadata.create_all(engine)
 
     migrate_database()
+
+
+# ============================================================
+# SENSOR READING SAVE
+# ============================================================
 
 
 def save_sensor_reading(reading):
@@ -267,4 +508,5 @@ def save_sensor_reading(reading):
         )
 
         session.add(sensor_reading)
+
         session.commit()
