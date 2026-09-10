@@ -14,14 +14,16 @@ Features:
 """
 
 import json
+import os
 import random
+import ssl
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 import paho.mqtt.client as mqtt
-
+from dotenv import load_dotenv
 
 # ============================================================
 # PROJECT PATH
@@ -43,13 +45,23 @@ from simulator.fault_profiles import (
     get_fault_stage,
 )
 
-
 # ============================================================
 # MQTT CONFIGURATION
 # ============================================================
 
-MQTT_BROKER = "localhost"
-MQTT_PORT = 1883
+# Load the project-root .env file when running locally.
+load_dotenv(PROJECT_ROOT / ".env")
+
+MQTT_MODE = os.getenv("MQTT_MODE", "LOCAL").strip().upper()
+
+MQTT_LOCAL_BROKER = os.getenv("MQTT_LOCAL_BROKER", "localhost").strip()
+MQTT_LOCAL_PORT = int(os.getenv("MQTT_LOCAL_PORT", "1883"))
+
+MQTT_CLOUD_BROKER = os.getenv("MQTT_CLOUD_BROKER", "").strip()
+MQTT_CLOUD_PORT = int(os.getenv("MQTT_CLOUD_PORT", "8883"))
+
+MQTT_USERNAME = os.getenv("MQTT_USERNAME", "")
+MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", "")
 
 TELEMETRY_TOPIC = "prodiag/factory/{machine_id}/telemetry"
 COMMAND_TOPIC = "prodiag/factory/+/command"
@@ -116,15 +128,11 @@ def create_machine_state(machine):
             HEALTHY_TICKS_MIN,
             HEALTHY_TICKS_MAX,
         ),
-
         "fault_type": machine.get("fault_type"),
         "fault_stage": None,
-
         "maintenance_required": False,
-
         "repair_ticks": 0,
         "restart_ticks": 0,
-
         # Previous sensor values are retained so telemetry changes
         # gradually instead of jumping randomly every second.
         "sensor_values": None,
@@ -132,14 +140,13 @@ def create_machine_state(machine):
 
 
 for machine in MACHINES:
-    machine_states[machine["machine_id"]] = create_machine_state(
-        machine
-    )
+    machine_states[machine["machine_id"]] = create_machine_state(machine)
 
 
 # ============================================================
 # UTILITY FUNCTIONS
 # ============================================================
+
 
 def random_from_range(value_range, default=0.0):
     """
@@ -218,9 +225,7 @@ def get_normal_value(
     Safely get a normal sensor value.
     """
 
-    value_range = normal_range.get(
-        field_name
-    )
+    value_range = normal_range.get(field_name)
 
     return random_from_range(
         value_range,
@@ -247,14 +252,13 @@ def get_machine_topic(machine_id):
     Build MQTT telemetry topic.
     """
 
-    return TELEMETRY_TOPIC.format(
-        machine_id=machine_id
-    )
+    return TELEMETRY_TOPIC.format(machine_id=machine_id)
 
 
 # ============================================================
 # DEFAULT CURRENT GENERATION
 # ============================================================
+
 
 def generate_default_current(machine):
     """
@@ -264,10 +268,7 @@ def generate_default_current(machine):
     Gearboxes are the main example in the current configuration.
     """
 
-    machine_type = (
-        machine.get("machine_type", "")
-        .lower()
-    )
+    machine_type = machine.get("machine_type", "").lower()
 
     if "gearbox" in machine_type:
         return random.uniform(8.0, 14.0)
@@ -293,6 +294,7 @@ def generate_default_current(machine):
 # ============================================================
 # NORMAL MACHINE TELEMETRY
 # ============================================================
+
 
 def generate_normal_reading(machine):
     """
@@ -359,21 +361,29 @@ def generate_normal_reading(machine):
         current_a = target_current
         rpm = target_rpm
     else:
-        temperature_c = previous["temperature_c"] + clamp(
-            target_temperature - previous["temperature_c"], -0.5, 0.5
-        ) + random.uniform(-0.08, 0.08)
+        temperature_c = (
+            previous["temperature_c"]
+            + clamp(target_temperature - previous["temperature_c"], -0.5, 0.5)
+            + random.uniform(-0.08, 0.08)
+        )
 
-        vibration_mm_s = previous["vibration_mm_s"] + clamp(
-            target_vibration - previous["vibration_mm_s"], -0.12, 0.12
-        ) + random.uniform(-0.03, 0.03)
+        vibration_mm_s = (
+            previous["vibration_mm_s"]
+            + clamp(target_vibration - previous["vibration_mm_s"], -0.12, 0.12)
+            + random.uniform(-0.03, 0.03)
+        )
 
-        current_a = previous["current_a"] + clamp(
-            target_current - previous["current_a"], -0.4, 0.4
-        ) + random.uniform(-0.08, 0.08)
+        current_a = (
+            previous["current_a"]
+            + clamp(target_current - previous["current_a"], -0.4, 0.4)
+            + random.uniform(-0.08, 0.08)
+        )
 
-        rpm = previous["rpm"] + clamp(
-            target_rpm - previous["rpm"], -8.0, 8.0
-        ) + random.uniform(-2.0, 2.0)
+        rpm = (
+            previous["rpm"]
+            + clamp(target_rpm - previous["rpm"], -8.0, 8.0)
+            + random.uniform(-2.0, 2.0)
+        )
 
     state["sensor_values"] = {
         "temperature_c": temperature_c,
@@ -390,75 +400,36 @@ def generate_normal_reading(machine):
         "machine_id": machine["machine_id"],
         "machine_name": machine["machine_name"],
         "machine_type": machine.get("machine_type"),
-
-        "department": machine.get(
-            "department"
-        ),
-
-        "production_line": machine.get(
-            "production_line"
-        ),
-
-        "area": machine.get(
-            "area"
-        ),
-
-        "location": machine.get(
-            "location"
-        ),
-
-        "manufacturer": machine.get(
-            "manufacturer"
-        ),
-
-        "model": machine.get(
-            "model"
-        ),
-
-        "criticality": machine.get(
-            "criticality"
-        ),
-
-        "production_impact": machine.get(
-            "production_impact"
-        ),
-
-        "operating_hours": machine.get(
-            "operating_hours"
-        ),
-
-        "timestamp": datetime.now(
-            timezone.utc
-        ).isoformat(),
-
+        "department": machine.get("department"),
+        "production_line": machine.get("production_line"),
+        "area": machine.get("area"),
+        "location": machine.get("location"),
+        "manufacturer": machine.get("manufacturer"),
+        "model": machine.get("model"),
+        "criticality": machine.get("criticality"),
+        "production_impact": machine.get("production_impact"),
+        "operating_hours": machine.get("operating_hours"),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "temperature_c": round(
             temperature_c,
             2,
         ),
-
         "vibration_mm_s": round(
             vibration_mm_s,
             2,
         ),
-
         "current_a": round(
             current_a,
             2,
         ),
-
         "rpm": round(
             rpm,
             0,
         ),
-
         "status": "RUNNING",
-
         "condition": "HEALTHY",
-
         "fault_type": None,
-
         "fault_stage": None,
-
         "maintenance_required": False,
     }
 
@@ -466,6 +437,7 @@ def generate_normal_reading(machine):
 # ============================================================
 # APPLY FAULT PROFILE
 # ============================================================
+
 
 def apply_fault_progression(
     machine,
@@ -475,20 +447,14 @@ def apply_fault_progression(
     Apply the configured fault profile to normal telemetry.
     """
 
-    reading = generate_normal_reading(
-        machine
-    )
+    reading = generate_normal_reading(machine)
 
-    fault_type = machine.get(
-        "fault_type"
-    )
+    fault_type = machine.get("fault_type")
 
     if not fault_type:
         return reading
 
-    profile = get_fault_profile(
-        fault_type
-    )
+    profile = get_fault_profile(fault_type)
 
     if profile is None:
         return reading
@@ -510,9 +476,7 @@ def apply_fault_progression(
         1.0,
     )
 
-    reading["vibration_mm_s"] *= (
-        vibration_multiplier
-    )
+    reading["vibration_mm_s"] *= vibration_multiplier
 
     # Sensor noise
     reading["vibration_mm_s"] += random.uniform(
@@ -529,9 +493,7 @@ def apply_fault_progression(
         0,
     )
 
-    reading["temperature_c"] += (
-        temperature_delta
-    )
+    reading["temperature_c"] += temperature_delta
 
     reading["temperature_c"] += random.uniform(
         -0.5,
@@ -547,9 +509,7 @@ def apply_fault_progression(
         0,
     )
 
-    reading["current_a"] += (
-        current_delta
-    )
+    reading["current_a"] += current_delta
 
     reading["current_a"] += random.uniform(
         -0.2,
@@ -624,6 +584,7 @@ def apply_fault_progression(
 # FAULTED MACHINE
 # ============================================================
 
+
 def generate_faulted_reading(machine):
     """
     Generate telemetry for a machine that has physically
@@ -632,18 +593,11 @@ def generate_faulted_reading(machine):
     FAULTED is persistent until maintenance is commanded.
     """
 
-    reading = generate_normal_reading(
-        machine
-    )
+    reading = generate_normal_reading(machine)
 
-    state = machine_states[
-        machine["machine_id"]
-    ]
+    state = machine_states[machine["machine_id"]]
 
-    fault_type = (
-        state.get("fault_type")
-        or machine.get("fault_type")
-    )
+    fault_type = state.get("fault_type") or machine.get("fault_type")
 
     # --------------------------------------------------------
     # Machine stopped
@@ -685,8 +639,7 @@ def generate_faulted_reading(machine):
     reading["temperature_c"] = round(
         max(
             35,
-            reading["temperature_c"]
-            - random.uniform(1, 4),
+            reading["temperature_c"] - random.uniform(1, 4),
         ),
         2,
     )
@@ -698,27 +651,22 @@ def generate_faulted_reading(machine):
 # REPAIRING MACHINE
 # ============================================================
 
+
 def generate_repairing_reading(machine):
     """
     Generate telemetry while maintenance personnel are
     repairing the machine.
     """
 
-    reading = generate_normal_reading(
-        machine
-    )
+    reading = generate_normal_reading(machine)
 
-    state = machine_states[
-        machine["machine_id"]
-    ]
+    state = machine_states[machine["machine_id"]]
 
     reading["status"] = "MAINTENANCE"
 
     reading["condition"] = "REPAIRING"
 
-    reading["fault_type"] = state.get(
-        "fault_type"
-    )
+    reading["fault_type"] = state.get("fault_type")
 
     reading["fault_stage"] = "REPAIRING"
 
@@ -750,25 +698,19 @@ def generate_repairing_reading(machine):
 # RESTART MACHINE
 # ============================================================
 
+
 def generate_restart_reading(machine):
     """
     Generate telemetry while a repaired machine is restarting.
     """
 
-    reading = generate_normal_reading(
-        machine
-    )
+    reading = generate_normal_reading(machine)
 
-    state = machine_states[
-        machine["machine_id"]
-    ]
+    state = machine_states[machine["machine_id"]]
 
-    progress = (
-        state["restart_ticks"]
-        / max(
-            1,
-            RESTART_TICKS,
-        )
+    progress = state["restart_ticks"] / max(
+        1,
+        RESTART_TICKS,
     )
 
     progress = clamp(
@@ -808,6 +750,7 @@ def generate_restart_reading(machine):
 
     return reading
 
+
 def get_fleet_counts():
     """
     Return the current number of machines in each condition.
@@ -831,9 +774,12 @@ def get_fleet_counts():
             counts[condition] += 1
 
     return counts
+
+
 # ============================================================
 # STATE TRANSITIONS
 # ============================================================
+
 
 def transition_machine(machine):
     """
@@ -964,10 +910,7 @@ def transition_machine(machine):
                     WARNING_TICKS_MAX,
                 )
 
-                print(
-                    f"[{machine_id}] "
-                    f"DEGRADING -> WARNING"
-                )
+                print(f"[{machine_id}] " f"DEGRADING -> WARNING")
 
             else:
 
@@ -1004,10 +947,7 @@ def transition_machine(machine):
                     CRITICAL_TICKS_MAX,
                 )
 
-                print(
-                    f"[{machine_id}] "
-                    f"WARNING -> CRITICAL"
-                )
+                print(f"[{machine_id}] " f"WARNING -> CRITICAL")
 
             else:
 
@@ -1094,10 +1034,7 @@ def transition_machine(machine):
 
             state["restart_ticks"] = 0
 
-            print(
-                f"[{machine_id}] "
-                f"REPAIRING -> RESTART"
-            )
+            print(f"[{machine_id}] " f"REPAIRING -> RESTART")
 
     # ========================================================
     # RESTART
@@ -1113,9 +1050,7 @@ def transition_machine(machine):
 
             state["fault_stage"] = None
 
-            state["fault_type"] = machine.get(
-                "fault_type"
-            )
+            state["fault_type"] = machine.get("fault_type")
 
             state["maintenance_required"] = False
 
@@ -1126,14 +1061,13 @@ def transition_machine(machine):
 
             state["restart_ticks"] = 0
 
-            print(
-                f"[{machine_id}] "
-                f"RESTART -> HEALTHY"
-            )
+            print(f"[{machine_id}] " f"RESTART -> HEALTHY")
+
 
 # ============================================================
 # MACHINE TELEMETRY GENERATOR
 # ============================================================
+
 
 def generate_machine_data(machine):
     """
@@ -1141,17 +1075,11 @@ def generate_machine_data(machine):
     condition.
     """
 
-    machine_id = machine[
-        "machine_id"
-    ]
+    machine_id = machine["machine_id"]
 
-    state = machine_states[
-        machine_id
-    ]
+    state = machine_states[machine_id]
 
-    condition = state[
-        "condition"
-    ]
+    condition = state["condition"]
 
     # --------------------------------------------------------
     # HEALTHY
@@ -1159,9 +1087,7 @@ def generate_machine_data(machine):
 
     if condition == "HEALTHY":
 
-        return generate_normal_reading(
-            machine
-        )
+        return generate_normal_reading(machine)
 
     # --------------------------------------------------------
     # DEGRADING
@@ -1202,9 +1128,7 @@ def generate_machine_data(machine):
 
     if condition == "FAULTED":
 
-        return generate_faulted_reading(
-            machine
-        )
+        return generate_faulted_reading(machine)
 
     # --------------------------------------------------------
     # REPAIRING
@@ -1212,9 +1136,7 @@ def generate_machine_data(machine):
 
     if condition == "REPAIRING":
 
-        return generate_repairing_reading(
-            machine
-        )
+        return generate_repairing_reading(machine)
 
     # --------------------------------------------------------
     # RESTART
@@ -1222,13 +1144,9 @@ def generate_machine_data(machine):
 
     if condition == "RESTART":
 
-        return generate_restart_reading(
-            machine
-        )
+        return generate_restart_reading(machine)
 
-    return generate_normal_reading(
-        machine
-    )
+    return generate_normal_reading(machine)
 
 
 # ============================================================
@@ -1246,37 +1164,27 @@ def on_connect(
 
     if reason_code == 0:
 
-        print(
-            "Connected to MQTT broker"
-        )
+        print("Connected to MQTT broker")
 
-        result = client.subscribe(
-            COMMAND_TOPIC
-        )
+        result = client.subscribe(COMMAND_TOPIC)
 
         if result[0] == mqtt.MQTT_ERR_SUCCESS:
 
-            print(
-                f"Subscribed to: "
-                f"{COMMAND_TOPIC}"
-            )
+            print(f"Subscribed to: " f"{COMMAND_TOPIC}")
 
         else:
 
-            print(
-                "WARNING: Failed to subscribe "
-                "to command topic"
-            )
+            print("WARNING: Failed to subscribe " "to command topic")
 
     else:
 
-        print(
-            f"MQTT connection failed. "
-            f"Reason code: {reason_code}"
-        )
+        print(f"MQTT connection failed. " f"Reason code: {reason_code}")
+
+
 # ============================================================
 # MQTT MESSAGE CALLBACK
 # ============================================================
+
 
 def on_message(
     client,
@@ -1299,43 +1207,29 @@ def on_message(
 
     try:
 
-        payload_text = msg.payload.decode(
-            "utf-8"
-        )
+        payload_text = msg.payload.decode("utf-8")
 
-        payload = json.loads(
-            payload_text
-        )
+        payload = json.loads(payload_text)
 
         topic_parts = msg.topic.split("/")
 
         if len(topic_parts) < 4:
 
-            print(
-                f"[COMMAND] Invalid topic: "
-                f"{msg.topic}"
-            )
+            print(f"[COMMAND] Invalid topic: " f"{msg.topic}")
 
             return
 
         machine_id = topic_parts[2]
 
-        command = payload.get(
-            "command"
-        )
+        command = payload.get("command")
 
         if machine_id not in machine_states:
 
-            print(
-                f"[COMMAND] Unknown machine: "
-                f"{machine_id}"
-            )
+            print(f"[COMMAND] Unknown machine: " f"{machine_id}")
 
             return
 
-        state = machine_states[
-            machine_id
-        ]
+        state = machine_states[machine_id]
 
         # ====================================================
         # REPAIR
@@ -1370,35 +1264,51 @@ def on_message(
 
         else:
 
-            print(
-                f"[COMMAND] Unknown command: "
-                f"{command}"
-            )
+            print(f"[COMMAND] Unknown command: " f"{command}")
 
     except json.JSONDecodeError:
 
-        print(
-            f"[COMMAND] Invalid JSON: "
-            f"{msg.payload}"
-        )
+        print(f"[COMMAND] Invalid JSON: " f"{msg.payload}")
 
     except Exception as exc:
 
-        print(
-            f"[COMMAND] Error: {exc}"
-        )
+        print(f"[COMMAND] Error: {exc}")
 
 
 # ============================================================
 # MQTT CLIENT
 # ============================================================
 
-client = mqtt.Client(
-    mqtt.CallbackAPIVersion.VERSION2
-)
 
-client.on_connect = on_connect
-client.on_message = on_message
+def create_mqtt_client():
+    """Create the MQTT client for LOCAL or HiveMQ CLOUD mode."""
+
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    if MQTT_MODE == "CLOUD":
+        if not MQTT_CLOUD_BROKER:
+            raise RuntimeError("MQTT_CLOUD_BROKER is required when MQTT_MODE=CLOUD.")
+        if not MQTT_USERNAME:
+            raise RuntimeError("MQTT_USERNAME is required when MQTT_MODE=CLOUD.")
+        if not MQTT_PASSWORD:
+            raise RuntimeError("MQTT_PASSWORD is required when MQTT_MODE=CLOUD.")
+
+        client.tls_set(cert_reqs=ssl.CERT_REQUIRED)
+        client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+
+        print("MQTT mode: CLOUD (HiveMQ Cloud)")
+        print(f"MQTT broker: {MQTT_CLOUD_BROKER}:{MQTT_CLOUD_PORT}")
+    else:
+        print("MQTT mode: LOCAL")
+        print(f"MQTT broker: {MQTT_LOCAL_BROKER}:{MQTT_LOCAL_PORT}")
+
+    return client
+
+
+client = create_mqtt_client()
 
 
 # ============================================================
@@ -1408,26 +1318,16 @@ client.on_message = on_message
 if __name__ == "__main__":
 
     print("=" * 58)
-    print(
-        "ProDiag AI V2 - Industrial Factory Simulator"
-    )
+    print("ProDiag AI V2 - Industrial Factory Simulator")
     print("=" * 58)
 
-    print(
-        f"Machines: {len(MACHINES)}"
-    )
+    print(f"Machines: {len(MACHINES)}")
 
-    print(
-        "Multiple fault events: ENABLED"
-    )
+    print("Multiple fault events: ENABLED")
 
-    print(
-        "Persistent machine breakdown: ENABLED"
-    )
+    print("Persistent machine breakdown: ENABLED")
 
-    print(
-        "Maintenance recovery: ENABLED"
-    )
+    print("Maintenance recovery: ENABLED")
 
     # --------------------------------------------------------
     # Connect MQTT
@@ -1435,18 +1335,22 @@ if __name__ == "__main__":
 
     try:
 
-        client.connect(
-            MQTT_BROKER,
-            MQTT_PORT,
-            60,
-        )
+        if MQTT_MODE == "CLOUD":
+            client.connect(
+                MQTT_CLOUD_BROKER,
+                MQTT_CLOUD_PORT,
+                60,
+            )
+        else:
+            client.connect(
+                MQTT_LOCAL_BROKER,
+                MQTT_LOCAL_PORT,
+                60,
+            )
 
     except Exception as exc:
 
-        print(
-            f"Unable to connect to MQTT broker: "
-            f"{exc}"
-        )
+        print(f"Unable to connect to MQTT broker: " f"{exc}")
 
         sys.exit(1)
 
@@ -1456,10 +1360,7 @@ if __name__ == "__main__":
 
     client.loop_start()
 
-    print(
-        f"Publishing every "
-        f"{PUBLISH_INTERVAL:.0f} second..."
-    )
+    print(f"Publishing every " f"{PUBLISH_INTERVAL:.0f} second...")
 
     print("=" * 58)
 
@@ -1477,25 +1378,19 @@ if __name__ == "__main__":
                 # Advance machine state
                 # --------------------------------------------
 
-                transition_machine(
-                    machine
-                )
+                transition_machine(machine)
 
                 # --------------------------------------------
                 # Generate telemetry
                 # --------------------------------------------
 
-                data = generate_machine_data(
-                    machine
-                )
+                data = generate_machine_data(machine)
 
                 # --------------------------------------------
                 # MQTT topic
                 # --------------------------------------------
 
-                topic = get_machine_topic(
-                    machine["machine_id"]
-                )
+                topic = get_machine_topic(machine["machine_id"])
 
                 # --------------------------------------------
                 # Publish
@@ -1508,23 +1403,17 @@ if __name__ == "__main__":
                     retain=False,
                 )
 
-            time.sleep(
-                PUBLISH_INTERVAL
-            )
+            time.sleep(PUBLISH_INTERVAL)
 
     except KeyboardInterrupt:
 
         print()
-        print(
-            "Stopping ProDiag AI simulator..."
-        )
+        print("Stopping ProDiag AI simulator...")
 
     except Exception as exc:
 
         print()
-        print(
-            f"Simulator error: {exc}"
-        )
+        print(f"Simulator error: {exc}")
 
         raise
 
@@ -1534,6 +1423,4 @@ if __name__ == "__main__":
 
         client.disconnect()
 
-        print(
-            "Simulator stopped."
-        )
+        print("Simulator stopped.")

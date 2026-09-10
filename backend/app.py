@@ -14,8 +14,17 @@ from database import (
     save_sensor_reading,
 )
 
-from services.diagnosis_service import diagnose_fault
+# ------------------------------------------------------------
+# DATABASE INITIALIZATION
+# ------------------------------------------------------------
+# IMPORTANT:
+# Initialize the database BEFORE importing services that may
+# query database tables during module initialization.
+# ------------------------------------------------------------
 
+initialize_database()
+
+from services.diagnosis_service import diagnose_fault
 from services.mqtt_service import MQTTService
 from services.anomaly_service import anomaly_service
 from services.health_service import enrich_reading
@@ -42,11 +51,13 @@ app = Flask(__name__)
 
 app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024
 
+
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
     default_limits=[],
 )
+
 
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "").strip()
 
@@ -69,10 +80,16 @@ else:
         resources={r"/api/*": {"origins": "http://localhost:5173"}},
     )
 
-initialize_database()
+
 initialize_factory_settings()
 
+
 latest_processed_readings = {}
+
+
+# ============================================================
+# MQTT TELEMETRY PROCESSING
+# ============================================================
 
 
 def process_mqtt_reading(data):
@@ -107,16 +124,22 @@ def process_mqtt_reading(data):
             enriched_reading["ml_failure_probability"] = ml_prediction[
                 "failure_probability"
             ]
+
             enriched_reading["ml_failure_within_1h"] = ml_prediction[
                 "failure_within_1h"
             ]
+
             enriched_reading["ml_failure_threshold"] = ml_prediction[
                 "failure_threshold"
             ]
+
             enriched_reading["ml_health_score"] = ml_prediction["health_score"]
+
             enriched_reading["ml_prediction_status"] = ml_prediction.get(
-                "prediction_status", "NORMAL"
+                "prediction_status",
+                "NORMAL",
             )
+
         # --------------------------------------------------------
         # FAULT EVENT TRACKING
         # --------------------------------------------------------
@@ -145,6 +168,7 @@ def process_mqtt_reading(data):
                     "is_anomaly": True,
                 },
             )
+
         else:
             alert_service.process_anomaly(
                 enriched_reading,
@@ -177,9 +201,18 @@ def process_mqtt_reading(data):
         print(f"Could not process telemetry: {error}")
 
 
+# ============================================================
+# MQTT SERVICE
+# ============================================================
+
 mqtt_service = MQTTService(on_reading=process_mqtt_reading)
 
 mqtt_service.start()
+
+
+# ============================================================
+# HEALTH
+# ============================================================
 
 
 @app.get("/api/health")
@@ -191,6 +224,11 @@ def health_check():
             "mqtt_connected": mqtt_service.connected,
         }
     )
+
+
+# ============================================================
+# FACTORY SETTINGS
+# ============================================================
 
 
 @app.get("/api/settings")
@@ -205,34 +243,46 @@ def get_settings():
 
     except Exception as error:
         print(f"Could not load factory settings: {error}")
+
         return jsonify({"error": "Could not load factory settings."}), 500
 
 
 @app.put("/api/settings")
 def save_settings():
+
     data = request.get_json(silent=True)
 
     if not isinstance(data, dict):
-        return jsonify({"error": "Request body must be a JSON object."}), 400
+        return jsonify({"error": ("Request body must be a JSON object.")}), 400
 
     try:
+
         settings = update_factory_settings(data)
 
         if settings is None:
-            return jsonify({"error": "Factory settings could not be saved."}), 500
+            return jsonify({"error": ("Factory settings could not be saved.")}), 500
 
         return jsonify(settings), 200
 
     except ValueError as error:
+
         return jsonify({"error": str(error)}), 400
 
     except Exception as error:
+
         print(f"Could not save factory settings: {error}")
+
         return jsonify({"error": "Could not save factory settings."}), 500
+
+
+# ============================================================
+# TELEMETRY
+# ============================================================
 
 
 @app.get("/api/telemetry")
 def get_all_telemetry():
+
     readings = list(latest_processed_readings.values())
 
     readings.sort(key=lambda reading: reading["machine_id"])
@@ -247,6 +297,7 @@ def get_all_telemetry():
 
 @app.get("/api/telemetry/latest")
 def get_latest_telemetry():
+
     motor_reading = latest_processed_readings.get("MTR-01")
 
     if motor_reading is None and latest_processed_readings:
@@ -258,17 +309,27 @@ def get_latest_telemetry():
     return jsonify(motor_reading)
 
 
+# ============================================================
+# MACHINE HISTORY
+# ============================================================
+
+
 @app.get("/api/machines/<machine_id>/history")
 def get_machine_history(machine_id):
+
     limit = request.args.get(
         "limit",
         default=60,
         type=int,
     )
 
-    limit = max(1, min(limit, 500))
+    limit = max(
+        1,
+        min(limit, 500),
+    )
 
     with SessionLocal() as session:
+
         readings = (
             session.query(SensorReading)
             .filter(SensorReading.machine_id == machine_id)
@@ -294,8 +355,8 @@ def get_machine_history(machine_id):
                     "health_score": reading.health_score,
                     "health_status": reading.health_status,
                     "ml_health_score": reading.ml_health_score,
-                    "ml_failure_probability": reading.ml_failure_probability,
-                    "ml_failure_within_1h": reading.ml_failure_within_1h,
+                    "ml_failure_probability": (reading.ml_failure_probability),
+                    "ml_failure_within_1h": (reading.ml_failure_within_1h),
                 }
                 for reading in readings
             ],
@@ -303,8 +364,14 @@ def get_machine_history(machine_id):
     )
 
 
+# ============================================================
+# MACHINE DIAGNOSIS
+# ============================================================
+
+
 @app.get("/api/machines/<machine_id>/diagnosis")
 def get_machine_diagnosis(machine_id):
+
     machine_reading = latest_processed_readings.get(machine_id)
 
     if machine_reading is None:
@@ -318,16 +385,22 @@ def get_machine_diagnosis(machine_id):
     return jsonify(
         {
             "machine_id": machine_id,
-            "machine_name": machine_reading["machine_name"],
+            "machine_name": (machine_reading["machine_name"]),
             "telemetry": machine_reading,
             "diagnosis": diagnosis,
         }
     )
 
 
+# ============================================================
+# AI MACHINE DIAGNOSIS
+# ============================================================
+
+
 @app.get("/api/machines/<machine_id>/ai-diagnosis")
 @limiter.limit("10 per minute")
 def get_ai_machine_diagnosis(machine_id):
+
     machine_reading = latest_processed_readings.get(machine_id)
 
     if machine_reading is None:
@@ -363,7 +436,7 @@ def get_ai_machine_diagnosis(machine_id):
     return jsonify(
         {
             "machine_id": machine_id,
-            "machine_name": machine_reading["machine_name"],
+            "machine_name": (machine_reading["machine_name"]),
             "telemetry": machine_reading,
             "anomaly": anomaly_result,
             "ai_diagnosis": ai_diagnosis,
@@ -371,21 +444,20 @@ def get_ai_machine_diagnosis(machine_id):
     )
 
 
+# ============================================================
+# AI MAINTENANCE COPILOT CHAT
+# ============================================================
+
+
 @app.post("/api/machines/<machine_id>/ai-diagnosis/chat")
 @limiter.limit("20 per minute")
 def chat_machine_diagnosis(machine_id):
-    """
-    Engineer chat with the AI Maintenance Copilot.
-
-    AI is called only when the engineer explicitly
-    sends a question.
-    """
 
     machine_reading = latest_processed_readings.get(machine_id)
 
     if machine_reading is None:
         return (
-            jsonify({"error": (f"No live telemetry found for {machine_id}")}),
+            jsonify({"error": (f"No live telemetry found " f"for {machine_id}")}),
             404,
         )
 
@@ -393,24 +465,30 @@ def chat_machine_diagnosis(machine_id):
 
     if not isinstance(data, dict):
         return (
-            jsonify({"error": "Request body must be a JSON object."}),
+            jsonify({"error": ("Request body must be " "a JSON object.")}),
             400,
         )
 
     try:
+
         question = validate_copilot_question(data.get("question"))
 
         conversation_history = validate_conversation_history(
-            data.get("conversation_history", [])
+            data.get(
+                "conversation_history",
+                [],
+            )
         )
 
     except ValueError as error:
+
         return (
             jsonify({"error": str(error)}),
             400,
         )
 
     try:
+
         result = chat_with_engineer(
             machine=machine_reading,
             question=question,
@@ -421,19 +499,21 @@ def chat_machine_diagnosis(machine_id):
         return jsonify(
             {
                 "machine_id": machine_id,
-                "machine_name": machine_reading["machine_name"],
+                "machine_name": (machine_reading["machine_name"]),
                 "question": question,
                 "response": result,
             }
         )
 
     except ValueError as error:
+
         return (
             jsonify({"error": str(error)}),
             400,
         )
 
     except Exception as error:
+
         print(f"[COPILOT CHAT ERROR] " f"{machine_id}: {error}")
 
         return (
@@ -444,8 +524,14 @@ def chat_machine_diagnosis(machine_id):
         )
 
 
+# ============================================================
+# ALERTS
+# ============================================================
+
+
 @app.get("/api/alerts")
 def get_alerts():
+
     active_alerts = alert_service.get_active_alerts()
 
     return jsonify(
@@ -458,6 +544,7 @@ def get_alerts():
 
 @app.get("/api/alerts/history")
 def get_alert_history():
+
     history = alert_service.get_alert_history()
 
     return jsonify(
@@ -468,15 +555,24 @@ def get_alert_history():
     )
 
 
+# ============================================================
+# FAULT EVENTS
+# ============================================================
+
+
 @app.get("/api/fault-events")
 def get_fault_events():
+
     limit = request.args.get(
         "limit",
         default=100,
         type=int,
     )
 
-    limit = max(1, min(limit, 500))
+    limit = max(
+        1,
+        min(limit, 500),
+    )
 
     events = fault_event_service.get_history(limit=limit)
 
@@ -490,13 +586,17 @@ def get_fault_events():
 
 @app.get("/api/machines/<machine_id>/fault-events")
 def get_machine_fault_events(machine_id):
+
     limit = request.args.get(
         "limit",
         default=100,
         type=int,
     )
 
-    limit = max(1, min(limit, 500))
+    limit = max(
+        1,
+        min(limit, 500),
+    )
 
     events = fault_event_service.get_history(
         machine_id=machine_id,
@@ -512,21 +612,29 @@ def get_machine_fault_events(machine_id):
     )
 
 
+# ============================================================
+# WORK ORDERS
+# ============================================================
+
+
 @app.post("/api/work-orders")
 def create_work_order():
+
     data = request.get_json() or {}
 
     machine_id = data.get("machine_id")
+
     machine_name = data.get("machine_name")
+
     title = data.get("title")
 
     if not machine_id or not machine_name or not title:
         return (
-            jsonify({"error": "machine_id, machine_name and title are required"}),
+            jsonify({"error": ("machine_id, machine_name " "and title are required")}),
             400,
         )
 
-    # Get the active alert for this machine
+    # Get active alert
     alert_id = None
 
     active_alert = alert_service.get_machine_alert(machine_id)
@@ -534,7 +642,7 @@ def create_work_order():
     if active_alert:
         alert_id = active_alert.get("alert_id")
 
-    # Get the latest fault event for this machine
+    # Get latest fault event
     fault_event_id = None
 
     fault_events = fault_event_service.get_history(
@@ -557,7 +665,10 @@ def create_work_order():
         machine_name=machine_name,
         title=title,
         description=data.get("description"),
-        priority=data.get("priority", "MEDIUM"),
+        priority=data.get(
+            "priority",
+            "MEDIUM",
+        ),
         fault_type=data.get("fault_type"),
         fault_event_id=fault_event_id,
         alert_id=alert_id,
@@ -566,14 +677,16 @@ def create_work_order():
     )
 
     if work_order is None:
-        return jsonify({"error": "Could not create work order"}), 500
+        return jsonify({"error": ("Could not create work order")}), 500
 
     return jsonify(work_order), 201
 
 
 @app.get("/api/work-orders")
 def get_work_orders():
+
     machine_id = request.args.get("machine_id")
+
     status = request.args.get("status")
 
     work_orders = work_order_service.get_work_orders(
@@ -591,20 +704,20 @@ def get_work_orders():
 
 @app.patch("/api/work-orders/<int:work_order_id>/status")
 def update_work_order_status(work_order_id):
+
     data = request.get_json() or {}
 
     status = data.get("status")
+
     engineer_name = data.get("engineer_name")
 
     if not status:
         return jsonify({"error": "Status is required"}), 400
 
-    # Completing a work order requires the engineer name so it is
-    # persisted in the database and remains available after reload.
     if status == "COMPLETED" and not str(engineer_name or "").strip():
         return (
             jsonify(
-                {"error": "engineer_name is required when completing a work order"}
+                {"error": ("engineer_name is required " "when completing a work order")}
             ),
             400,
         )
@@ -612,7 +725,7 @@ def update_work_order_status(work_order_id):
     work_order = work_order_service.update_status(
         work_order_id,
         status,
-        engineer_name=str(engineer_name).strip() if engineer_name else None,
+        engineer_name=(str(engineer_name).strip() if engineer_name else None),
     )
 
     if work_order is None:
@@ -621,24 +734,42 @@ def update_work_order_status(work_order_id):
     return jsonify(work_order)
 
 
+# ============================================================
+# MAINTENANCE AGENT
+# ============================================================
+
+
 @app.post("/api/maintenance/agent")
 def maintenance_agent():
+
     data = request.get_json() or {}
 
     machine = data.get("machine")
-    request_text = data.get("request", "Create a maintenance plan")
+
+    request_text = data.get(
+        "request",
+        "Create a maintenance plan",
+    )
+
     diagnosis = data.get("diagnosis")
 
     if not machine:
         return jsonify({"error": "machine is required"}), 400
 
     if not isinstance(machine, dict):
-        return jsonify({"error": "machine must be an object"}), 400
+        return jsonify({"error": ("machine must be an object")}), 400
 
-    if not isinstance(request_text, str) or not request_text.strip():
+    if (
+        not isinstance(
+            request_text,
+            str,
+        )
+        or not request_text.strip()
+    ):
         return jsonify({"error": "request must be text"}), 400
 
     try:
+
         result = run_maintenance_agent(
             machine=machine,
             request=request_text,
@@ -648,21 +779,36 @@ def maintenance_agent():
         return jsonify(result), 200
 
     except ValueError as error:
+
         return jsonify({"error": str(error)}), 400
 
     except Exception as error:
+
         print(f"Maintenance Agent failed: {error}")
-        return jsonify({"error": "Could not run Maintenance Agent"}), 500
+
+        return jsonify({"error": ("Could not run Maintenance Agent")}), 500
+
+
+# ============================================================
+# ENGINEER APPROVAL
+# ============================================================
 
 
 @app.post("/api/maintenance/approve")
 def approve_maintenance_proposal():
+
     data = request.get_json() or {}
 
     proposal = data.get("proposal")
+
     decision = data.get("decision")
+
     engineer_name = data.get("engineer_name")
-    comment = data.get("comment", "")
+
+    comment = data.get(
+        "comment",
+        "",
+    )
 
     if not proposal:
         return jsonify({"error": "proposal is required"}), 400
@@ -671,9 +817,10 @@ def approve_maintenance_proposal():
         return jsonify({"error": "decision is required"}), 400
 
     if not engineer_name:
-        return jsonify({"error": "engineer_name is required"}), 400
+        return jsonify({"error": ("engineer_name is required")}), 400
 
     try:
+
         approval = process_engineer_approval(
             proposal=proposal,
             decision=decision,
@@ -684,9 +831,10 @@ def approve_maintenance_proposal():
         work_order = None
 
         if approval["proposal_status"] == "APPROVED":
+
             machine_id = proposal.get("machine_id")
 
-            # Link the current active alert to the Work Order.
+            # Link active alert
             alert_id = None
 
             active_alert = alert_service.get_machine_alert(machine_id)
@@ -694,7 +842,7 @@ def approve_maintenance_proposal():
             if active_alert:
                 alert_id = active_alert.get("alert_id")
 
-            # Link the latest fault event to the Work Order.
+            # Link latest fault event
             fault_event_id = None
 
             fault_events = fault_event_service.get_history(
@@ -730,7 +878,9 @@ def approve_maintenance_proposal():
                 return (
                     jsonify(
                         {
-                            "error": "Approval succeeded but work order creation failed.",
+                            "error": (
+                                "Approval succeeded " "but work order creation failed."
+                            ),
                             "approval": approval,
                         }
                     ),
@@ -748,25 +898,49 @@ def approve_maintenance_proposal():
         )
 
     except ValueError as error:
+
         return jsonify({"error": str(error)}), 400
 
     except Exception as error:
+
         print(f"Maintenance approval failed: {error}")
-        return jsonify({"error": "Could not process maintenance approval"}), 500
+
+        return jsonify({"error": ("Could not process " "maintenance approval")}), 500
 
 
-@app.route("/api/rag/search", methods=["GET"])
+# ============================================================
+# RAG SEARCH
+# ============================================================
+
+
+@app.route(
+    "/api/rag/search",
+    methods=["GET"],
+)
 @limiter.limit("30 per minute")
 def rag_search():
-    query = request.args.get("q", "").strip()
+
+    query = request.args.get(
+        "q",
+        "",
+    ).strip()
 
     if not query:
-        return jsonify({"error": "Query parameter 'q' is required."}), 400
+        return jsonify({"error": ("Query parameter 'q' is required.")}), 400
 
     try:
-        top_k = int(request.args.get("top_k", 5))
 
-        top_k = max(1, min(top_k, 10))
+        top_k = int(
+            request.args.get(
+                "top_k",
+                5,
+            )
+        )
+
+        top_k = max(
+            1,
+            min(top_k, 10),
+        )
 
         results = retrieve_knowledge(
             query=query,
@@ -782,39 +956,55 @@ def rag_search():
         )
 
     except Exception as error:
+
         print(f"RAG search error: {error}")
 
-        return jsonify({"error": "RAG retrieval failed."}), 500
+        return jsonify({"error": ("RAG retrieval failed.")}), 500
+
+
+# ============================================================
+# ERROR HANDLERS
+# ============================================================
 
 
 @app.errorhandler(400)
 def handle_bad_request(error):
+
     return jsonify({"error": "Bad request."}), 400
 
 
 @app.errorhandler(404)
 def handle_not_found(error):
+
     return jsonify({"error": "API endpoint not found."}), 404
 
 
 @app.errorhandler(405)
 def handle_method_not_allowed(error):
+
     return jsonify({"error": "HTTP method not allowed."}), 405
 
 
 @app.errorhandler(413)
 def handle_request_too_large(error):
-    return jsonify({"error": "Request payload is too large."}), 413
+
+    return jsonify({"error": ("Request payload is too large.")}), 413
 
 
 @app.errorhandler(500)
 def handle_internal_error(error):
+
     print(f"[INTERNAL SERVER ERROR] {error}")
 
     return jsonify({"error": "Internal server error."}), 500
 
 
+# ============================================================
+# LOCAL DEVELOPMENT
+# ============================================================
+
 if __name__ == "__main__":
+
     app.run(
         debug=True,
         use_reloader=False,

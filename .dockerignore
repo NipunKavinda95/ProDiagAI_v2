@@ -1,0 +1,50 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Frontend
+node_modules/
+dist/
+frontend/node_modules/
+frontend/dist/
+
+# Git
+.git/
+.gitignore
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Evaluation / development artifacts
+evaluation/
+llm_evaluation_report/
+
+# Temporary files
+*.tmp
+*.temp
+
+# SQLite runtime database
+backend/prodiag.db
+backend/prodiag.db-wal
+backend/prodiag.db-shm
