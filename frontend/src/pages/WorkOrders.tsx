@@ -54,6 +54,8 @@ function WorkOrders() {
     const [statusLoading, setStatusLoading] = useState(false);
     const [statusError, setStatusError] = useState("");
 
+    const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+
     const [completionEngineer, setCompletionEngineer] = useState("");
     const [filterStatus, setFilterStatus] = useState("ALL");
 
@@ -104,7 +106,7 @@ function WorkOrders() {
     const loadWorkOrders = async () => {
         try {
             const response = await fetch(
-                "http://127.0.0.1:5000/api/work-orders"
+                `${API_BASE}/api/work-orders`
             );
 
             if (!response.ok) {
@@ -166,7 +168,7 @@ function WorkOrders() {
 
         try {
             const response = await fetch(
-                `http://127.0.0.1:5000/api/work-orders/${workOrder.work_order_id}/status`,
+                `${API_BASE}/api/work-orders/${workOrder.work_order_id}/status`,
                 {
                     method: "PATCH",
                     headers: {

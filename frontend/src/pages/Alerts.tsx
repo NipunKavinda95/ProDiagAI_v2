@@ -33,12 +33,13 @@ function Alerts() {
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [error, setError] = useState("");
     const [filter, setFilter] = useState<AlertFilter>("ALL");
+    const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 
     useEffect(() => {
         const loadAlerts = async () => {
             try {
                 const response = await fetch(
-                    "http://127.0.0.1:5000/api/alerts"
+                    `${API_BASE}/api/alerts`
                 );
 
                 if (!response.ok) {

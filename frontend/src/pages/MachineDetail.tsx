@@ -207,6 +207,7 @@ function MachineDetail() {
     const [approvalComment, setApprovalComment] = useState("");
     const [approvalLoading, setApprovalLoading] = useState(false);
     const [approvalError, setApprovalError] = useState("");
+    const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 
     useEffect(() => {
         if (!machineId) return;
@@ -214,7 +215,7 @@ function MachineDetail() {
         const loadMachine = async () => {
             try {
                 const response = await fetch(
-                    "http://127.0.0.1:5000/api/telemetry"
+                    `${API_BASE}/api/telemetry`
                 );
 
                 if (!response.ok) {
@@ -253,7 +254,7 @@ function MachineDetail() {
         const loadHistory = async () => {
             try {
                 const response = await fetch(
-                    `http://127.0.0.1:5000/api/machines/${machineId}/history?limit=40`
+                    `${API_BASE}/api/machines/${machineId}/history?limit=40`
                 );
 
                 if (!response.ok) {
@@ -283,7 +284,7 @@ function MachineDetail() {
 
         try {
             const response = await fetch(
-                `http://127.0.0.1:5000/api/machines/${machineId}/ai-diagnosis`
+                `${API_BASE}/api/machines/${machineId}/ai-diagnosis`
             );
 
             if (!response.ok) {
@@ -326,7 +327,7 @@ function MachineDetail() {
 
         try {
             const response = await fetch(
-                `http://127.0.0.1:5000/api/machines/${machineId}/ai-diagnosis/chat`,
+                `${API_BASE}/api/machines/${machineId}/ai-diagnosis/chat`,
                 {
                     method: "POST",
                     headers: {
@@ -386,7 +387,7 @@ function MachineDetail() {
 
         try {
             const response = await fetch(
-                "http://127.0.0.1:5000/api/maintenance/agent",
+                `${API_BASE}/api/maintenance/agent`,
                 {
                     method: "POST",
                     headers: {
@@ -456,7 +457,7 @@ function MachineDetail() {
 
         try {
             const response = await fetch(
-                "http://127.0.0.1:5000/api/maintenance/approve",
+                `${API_BASE}/api/maintenance/approve`,
                 {
                     method: "POST",
                     headers: {

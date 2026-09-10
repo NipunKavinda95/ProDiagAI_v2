@@ -151,11 +151,12 @@ function FleetDashboard() {
     const [selectedCategory, setSelectedCategory] = useState<MachineCategory>("ALL");
     const [selectedDepartment, setSelectedDepartment] = useState<MachineDepartment>("ALL");
     const [error, setError] = useState("");
+    const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 
     useEffect(() => {
         const loadFactorySettings = async () => {
             try {
-                const response = await fetch("http://127.0.0.1:5000/api/settings");
+                const response = await fetch(`${API_BASE}/api/settings`);
 
                 if (!response.ok) {
                     throw new Error("Factory settings are not available");
@@ -174,7 +175,7 @@ function FleetDashboard() {
     useEffect(() => {
         const loadTelemetry = async () => {
             try {
-                const response = await fetch("http://127.0.0.1:5000/api/telemetry");
+                const response = await fetch(`${API_BASE}/api/telemetry`);
 
                 if (!response.ok) {
                     throw new Error("Telemetry API is not available");
