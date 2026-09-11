@@ -18,7 +18,9 @@ import os
 import random
 import ssl
 import sys
+import threading
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -1312,29 +1314,42 @@ client = create_mqtt_client()
 
 
 # ============================================================
-# MAIN
+# FREE WEB SERVICE HEALTH SERVER
 # ============================================================
 
-if __name__ == "__main__":
+class HealthHandler(BaseHTTPRequestHandler):
+    """Minimal HTTP endpoint so the simulator can run as a Render Web Service."""
 
-    print("=" * 58)
-    print("ProDiag AI V2 - Industrial Factory Simulator")
-    print("=" * 58)
+    def do_GET(self):
+        if self.path in ("/", "/health"):
+            body = json.dumps({
+                "status": "ok",
+                "service": "prodiag-plc-simulator",
+                "mqtt_mode": MQTT_MODE,
+                "machines": len(MACHINES),
+            }).encode("utf-8")
 
-    print(f"Machines: {len(MACHINES)}")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
 
-    print("Multiple fault events: ENABLED")
+        self.send_response(404)
+        self.end_headers()
 
-    print("Persistent machine breakdown: ENABLED")
+    def log_message(self, format, *args):
+        # Keep Render logs focused on simulator/MQTT messages.
+        return
 
-    print("Maintenance recovery: ENABLED")
 
-    # --------------------------------------------------------
-    # Connect MQTT
-    # --------------------------------------------------------
+def run_simulation():
+    """Connect to MQTT and run the existing continuous PLC simulation loop."""
+
+    print("Connecting simulator to MQTT...")
 
     try:
-
         if MQTT_MODE == "CLOUD":
             client.connect(
                 MQTT_CLOUD_BROKER,
@@ -1349,52 +1364,22 @@ if __name__ == "__main__":
             )
 
     except Exception as exc:
-
-        print(f"Unable to connect to MQTT broker: " f"{exc}")
-
-        sys.exit(1)
-
-    # --------------------------------------------------------
-    # Start MQTT background loop
-    # --------------------------------------------------------
+        print(f"Unable to connect to MQTT broker: {exc}")
+        raise
 
     client.loop_start()
 
-    print(f"Publishing every " f"{PUBLISH_INTERVAL:.0f} second...")
-
+    print(f"Publishing every {PUBLISH_INTERVAL:.0f} second...")
+    print("MQTT telemetry publishing: ENABLED")
+    print("Maintenance command listener: ENABLED")
     print("=" * 58)
 
-    # --------------------------------------------------------
-    # Simulation loop
-    # --------------------------------------------------------
-
     try:
-
         while True:
-
             for machine in MACHINES:
-
-                # --------------------------------------------
-                # Advance machine state
-                # --------------------------------------------
-
                 transition_machine(machine)
-
-                # --------------------------------------------
-                # Generate telemetry
-                # --------------------------------------------
-
                 data = generate_machine_data(machine)
-
-                # --------------------------------------------
-                # MQTT topic
-                # --------------------------------------------
-
                 topic = get_machine_topic(machine["machine_id"])
-
-                # --------------------------------------------
-                # Publish
-                # --------------------------------------------
 
                 client.publish(
                     topic,
@@ -1405,22 +1390,46 @@ if __name__ == "__main__":
 
             time.sleep(PUBLISH_INTERVAL)
 
-    except KeyboardInterrupt:
-
-        print()
-        print("Stopping ProDiag AI simulator...")
-
-    except Exception as exc:
-
-        print()
-        print(f"Simulator error: {exc}")
-
-        raise
-
     finally:
-
         client.loop_stop()
-
         client.disconnect()
-
         print("Simulator stopped.")
+
+
+# ============================================================
+# MAIN
+# ============================================================
+
+if __name__ == "__main__":
+
+    print("=" * 58)
+    print("ProDiag AI V2 - Industrial Factory Simulator")
+    print("=" * 58)
+    print(f"Machines: {len(MACHINES)}")
+    print("Multiple fault events: ENABLED")
+    print("Persistent machine breakdown: ENABLED")
+    print("Maintenance recovery: ENABLED")
+    print("Render Free Web Service mode: ENABLED")
+
+    # Run the PLC/MQTT simulator in the background so the HTTP server
+    # can keep the Render Web Service port open for health checks.
+    simulation_thread = threading.Thread(
+        target=run_simulation,
+        name="plc-simulation",
+        daemon=True,
+    )
+    simulation_thread.start()
+
+    port = int(os.getenv("PORT", "10000"))
+    server = ThreadingHTTPServer(("0.0.0.0", port), HealthHandler)
+
+    print(f"Health server listening on 0.0.0.0:{port}")
+    print("Health endpoint: /health")
+    print("=" * 58)
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping ProDiag AI simulator...")
+    finally:
+        server.server_close()
