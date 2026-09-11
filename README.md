@@ -1,820 +1,538 @@
-⚙️ ProDiag AI V2
+# ⚙️ ProDiag AI V2
 
-Agentic Predictive Maintenance Copilot for Industrial Assets
+### Agentic Predictive Maintenance Copilot for Industrial Assets
 
-From machine signals to maintenance decisions.
+> **From Machine Signals to Maintenance Decisions.**
 
-ProDiag AI V2 is an industrial predictive maintenance platform combining Industrial IoT, Machine Learning, Anomaly Detection, RAG, and AI-powered maintenance intelligence to help engineers monitor machine health, identify potential failures, investigate faults, and plan maintenance actions.
+**Predict Before Failure. Act Before Downtime.**
 
-🚀 Product Vision
+[🌐 Live Demo](https://prodiagai.vercel.app) · [💻 GitHub](https://github.com/NipunKavinda95/ProDiagAI_v2)
 
-flowchart LR
-A["🏭 Machine Sensors"] --> B["📡 MQTT / IIoT"]
-B --> C["🧠 Machine Health"]
-C --> D["📊 ML Prediction"]
-D --> E["🚨 Anomaly & Fault Detection"]
-E --> F["🔔 Alerts"]
-F --> G["🤖 AI Diagnosis"]
-G --> H["👨‍🔧 Engineer Copilot"]
-H --> I["🔧 Maintenance Recommendation"]
-I --> J["✅ Engineer Approval"]
-J --> K["📝 Work Order"]
+---
 
-ProDiag AI is designed to move maintenance from reactive maintenance → predictive maintenance → AI-assisted maintenance decision-making.
+## 🎯 Overview
 
-✨ Key Capabilities
+ProDiag AI V2 is an AI-powered industrial predictive-maintenance platform combining Industrial IoT, Machine Learning, Anomaly Detection, RAG and AI-powered maintenance intelligence.
 
-Capability
+The platform helps engineers **monitor machine health, identify potential failures, investigate faults and plan maintenance actions**.
 
-Description
+> **Core Principle:** AI should help engineers make better maintenance decisions — not replace engineering responsibility.
 
-📡 Industrial IoT
+---
 
-Real-time MQTT machine telemetry
+## 🏭 Business Problem
 
-🏭 Fleet Monitoring
+Industrial operations depend on critical assets such as motors, pumps, compressors, conveyors, gearboxes and fans.
 
-20 simulated industrial machines
+Unexpected equipment failure can cause:
 
+- Production interruption
+- Unplanned downtime
+- Emergency maintenance
+- Higher maintenance pressure
+- Delayed production
+- Reduced equipment availability
+- Increased operational cost
+
+### The challenge
+
+**How can maintenance teams identify warning signs early enough to act before a failure becomes a major operational problem?**
+
+---
+
+## 💡 The Solution
+
+ProDiag AI moves maintenance from:
+
+**Reactive Maintenance**
+
+`Machine fails → Emergency response → Repair → Production impact`
+
+toward:
+
+**Predictive / AI-Assisted Maintenance**
+
+`Machine Data → Health → Risk → Diagnosis → Recommendation → Engineer Decision → Maintenance Action`
+
+---
+
+## 🔄 Product Workflow
+
+```text
+🏭 Machine Sensors / PLC
+          ↓
+📡 Industrial Telemetry
+          ↓
+❤️ Machine Health
+          ↓
 🧠 ML Prediction
-
-Failure probability and health prediction
-
-❤️ Health Intelligence
-
-Continuous 0–100 machine health score
-
-🚨 Anomaly Detection
-
-Isolation Forest + engineering rules
-
+          ↓
+🚨 Anomaly & Fault Detection
+          ↓
 🔔 Alerts
-
-Machine condition and risk alerts
-
-📚 RAG
-
-Engineering maintenance knowledge retrieval
-
+          ↓
 🤖 AI Diagnosis
-
-Evidence-based potential fault diagnosis
-
+          ↓
 💬 Engineer Copilot
+          ↓
+🔧 Maintenance Recommendation
+          ↓
+👨‍🔧 Engineer Approval
+          ↓
+📝 Work Order
+```
 
-Conversational maintenance assistance
+---
 
-📝 Work Orders
+## ✨ Core Capabilities
 
-Engineer-approved maintenance execution
+| Capability             | Purpose                                     |
+| ---------------------- | ------------------------------------------- |
+| 📡 Industrial IoT      | Real-time MQTT machine telemetry            |
+| 🏭 Fleet Monitoring    | Monitor a 20-machine demonstration fleet    |
+| ❤️ Health Intelligence | Continuous 0–100 machine health scoring     |
+| 🧠 ML Prediction       | Failure probability and health prediction   |
+| 🚨 Anomaly Detection   | Isolation Forest + engineering rules        |
+| 🔔 Intelligent Alerts  | Machine condition and risk alerts           |
+| 📚 RAG Knowledge       | Engineering maintenance knowledge retrieval |
+| 🤖 AI Diagnosis        | Evidence-based potential fault diagnosis    |
+| 💬 Engineer Copilot    | Conversational maintenance assistance       |
+| 📝 Work Orders         | Engineer-approved maintenance execution     |
+| 🛡️ Guardrails          | Input, output, API and AI safety controls   |
+| 🤖 Agentic Roadmap     | Planning, parts, cost, PM and scheduling    |
 
-🛡️ Guardrails
+---
 
-Input, output, API and AI security controls
+## 📸 Product Screenshots
 
-🤖 Agentic Roadmap
+Create a folder:
 
-Planning, parts, cost, PM and scheduling
+```text
+docs/screenshots/
+```
 
-🏗️ System Architecture
+and add these screenshots:
 
-flowchart TB
-subgraph IIOT["🏭 Industrial Layer"]
-S["Machine Sensors / PLC"]
-M["MQTT Broker"]
-SIM["PLC / Sensor Simulator"]
-end
+### Fleet Dashboard
 
-    subgraph BACKEND["⚙️ ProDiag Backend"]
-        API["Flask API"]
-        HEALTH["Health Service"]
-        ML["ML Prediction"]
-        ANOM["Anomaly Detection"]
-        ALERT["Alert Service"]
-        EVENT["Fault Event Service"]
-        WO["Work Order Service"]
-    end
+```markdown
+![Fleet Dashboard](docs/screenshots/fleet-dashboard.png)
+```
 
-    subgraph AI["🤖 AI Intelligence"]
-        DIAG["AI Diagnosis"]
-        COPILOT["Engineer Copilot"]
-        RAG["RAG Retrieval"]
-        PINE["Pinecone"]
-        LLM["OpenAI"]
-    end
+Shows the 20-machine fleet, health distribution and equipment categories.
 
-    subgraph DATA["💾 Data"]
-        DB["SQLite / Future PostgreSQL"]
-        KB["Engineering Knowledge Base"]
-    end
+### Machine Detail
 
-    SIM --> M
-    S --> M
-    M --> API
-    API --> HEALTH
-    API --> ML
-    API --> ANOM
-    API --> ALERT
-    API --> EVENT
-    API --> WO
-    ML --> DIAG
-    ANOM --> DIAG
-    HEALTH --> DIAG
-    DIAG --> LLM
-    COPILOT --> LLM
-    COPILOT --> RAG
-    RAG --> PINE
-    KB --> PINE
-    API --> DB
-    ALERT --> DB
-    EVENT --> DB
-    WO --> DB
+```markdown
+![Machine Detail](docs/screenshots/machine-detail.png)
+```
 
-🏭 Industrial IoT
+Shows individual machine health, prediction and maintenance intelligence.
 
-ProDiag V2 includes a simulated industrial environment containing 20 machines with independent machine conditions and progressive fault behavior.
+### Analytics
 
-Machine lifecycle
+```markdown
+![Analytics](docs/screenshots/analytics.png)
+```
 
-stateDiagram-v2
-[*] --> HEALTHY
-HEALTHY --> DEGRADING
-DEGRADING --> WARNING
-WARNING --> CRITICAL
-CRITICAL --> FAULTED
-FAULTED --> REPAIRING
-REPAIRING --> RESTART
-RESTART --> HEALTHY
+Shows sensor trends, machine condition patterns and predictive health insights.
 
-Supported conditions
+### AI Diagnosis
 
-HEALTHY
+```markdow
+![AI Diagnosis](docs/screenshots/ai-diagnosis.png)
+```
 
-DEGRADING
+Shows AI-assisted fault analysis, evidence and recommended maintenance actions.
 
-WARNING
+Shows warnings, critical events and machine-condition changes.
 
-CRITICAL
+### Engineer Copilot
 
-FAULTED
+```markdown
+![Engineer Copilot](docs/screenshots/co-pilot.png)
+```
 
-REPAIRING
+Shows AI-assisted maintenance investigation.
 
-RESTART
+### Work Orders
 
-Simulated fault types
+```markdown
+![Work Orders](docs/screenshots/work-orders.png)
+```
 
-Bearing wear
+Shows engineer-approved maintenance actions.
 
-Cavitation
+> **Tip:** Use the real screenshots from the deployed Vercel application. This makes the GitHub page look like a professional product showcase rather than a code repository.
 
-Overload
+---
 
-Belt misalignment
+## 🧠 Machine Health Intelligence
 
-Fan imbalance
+|     Score | Condition |
+| --------: | --------- |
+| 🟢 80–100 | Healthy   |
+|  🔵 60–79 | Degrading |
+|  🟡 40–59 | Warning   |
+|  🟠 20–39 | Critical  |
+|   🔴 0–19 | Fault     |
 
-Gear wear
+Machine lifecycle:
 
-🧠 Machine Learning
+`HEALTHY → DEGRADING → WARNING → CRITICAL → FAULTED`
 
-ProDiag uses machine learning to continuously evaluate machine condition and failure risk.
+Recovery:
 
-Failure prediction
+`FAULTED → REPAIRING → RESTART → HEALTHY`
 
-The failure prediction model was evaluated using:
+---
 
-F1-score
+## 🔍 Predictive & Anomaly Intelligence
 
-Precision
+### Machine Learning
 
-Recall
+**XGBoost** is the selected failure-prediction model.
 
-Confusion matrix
+Evaluation includes:
 
-Classification threshold analysis
+- F1-score
+- Precision
+- Recall
+- Confusion matrix
+- Classification threshold analysis
 
-Selected model: XGBoost
+### Anomaly Detection
 
-❤️ ML Health Score
+```text
+Live Telemetry
+      ↓
+Feature Processing
+      ↓
+ ┌───────────────┐
+ │               │
+ ▼               ▼
+Isolation      Engineering
+Forest            Rules
+ │               │
+ └───────┬───────┘
+         ↓
+Combined Anomaly Result
+         ↓
+Alert / Maintenance Intelligence
+```
 
-Score
+---
 
-Condition
+## 📚 RAG Engineering Knowledge
 
-80–100
+ProDiag AI grounds maintenance assistance in engineering knowledge.
 
-🟢 HEALTHY
+Knowledge sources include:
 
-60–79
+- Maintenance manuals
+- Fault codes
+- Bearing failure modes
+- Maintenance SOPs
+- Spare parts
+- Industry standards
+- Historical faults
 
-🔵 DEGRADING
+```text
+Engineering Documents
+        ↓
+Preprocessing
+        ↓
+Section-Aware Chunking
+        ↓
+OpenAI Embeddings
+        ↓
+Pinecone
+        ↓
+Relevant Engineering Knowledge
+        ↓
+AI Maintenance Copilot
+```
 
-40–59
+Retrieved documents are treated as **reference evidence**, not AI instructions.
 
-🟡 WARNING
+---
 
-20–39
+## 🤖 AI Maintenance Intelligence
 
-🟠 CRITICAL
-
-0–19
-
-🔴 FAULT
-
-The ML health score and actual machine operational condition are treated as separate signals.
-
-📊 Anomaly Detection
-
-ProDiag combines machine-learning anomaly detection with engineering validation rules.
-
-flowchart LR
-A["Live Telemetry"] --> B["Feature Processing"]
-B --> C["Isolation Forest"]
-B --> D["Engineering Rules"]
-C --> E["Anomaly Score"]
-D --> F["Engineering Evidence"]
-E --> G["Combined Anomaly Result"]
-F --> G
-G --> H["Alert / Maintenance Intelligence"]
-
-🚨 Alerts & Fault Events
-
-ProDiag tracks machine condition transitions and generates alerts for significant machine conditions.
-
-HEALTHY → DEGRADING → WARNING → CRITICAL → FAULTED
-↓
-REPAIRING
-↓
-RESTART
-↓
-HEALTHY
-
-Fault events are persisted so maintenance activity can be associated with the machine condition that triggered it.
-
-📚 RAG Engineering Knowledge
-
-ProDiag uses Retrieval-Augmented Generation to ground AI maintenance recommendations in engineering knowledge.
-
-knowledge-base/
-├── maintenance_manuals/
-├── fault_codes/
-├── bearing_failure_modes/
-├── maintenance_sop/
-├── spare_parts/
-├── industry_standards/
-└── historical_faults/
-
-RAG pipeline
-
-flowchart LR
-A["Engineering Documents"] --> B["Preprocessing"]
-B --> C["Section-Aware Chunking"]
-C --> D["OpenAI Embeddings"]
-D --> E["Pinecone"]
-
-    Q["Engineer Question"] --> F["Query Embedding"]
-    F --> E
-    E --> G["Relevant Knowledge"]
-    G --> H["AI Maintenance Copilot"]
-
-Configuration
-
-Embedding Model: text-embedding-3-small
-Dimension: 1536
-Vector Database: Pinecone
-Index: prodiag-ai
-Namespace: prodiag
-Metric: cosine
-
-Retrieved documents are treated as reference evidence, not AI instructions.
-
-🤖 AI Maintenance Intelligence
-
-ProDiag currently provides two connected AI capabilities.
-
-AI Diagnosis
+### AI Diagnosis
 
 Provides:
 
-Probable fault
+- Probable fault
+- Diagnosis
+- Confidence
+- Evidence
+- Recommended actions
+- Urgency
+- Escalation recommendation
 
-Diagnosis
+### Engineer Copilot
 
-Confidence
+Combines:
 
-Evidence
+`Machine Context + ML Prediction + Anomaly Evidence + RAG Knowledge + Conversation Context`
 
-Recommended actions
+into an AI-assisted maintenance recommendation.
 
-Urgency
+---
 
-Escalation recommendation
+## 🧑‍🔧 Human-in-the-Loop
 
-Engineer Copilot
+ProDiag AI is a **decision-support system**, not an autonomous machine-control system.
 
-Uses:
-
-Current Machine Context +
-ML Prediction +
-Anomaly Evidence +
-RAG Knowledge +
-Conversation Context
-↓
-AI Maintenance Recommendation
-
-AI is called on demand when the engineer requests diagnosis or assistance.
-
-💬 Engineer Copilot
-
-The Engineer Copilot is integrated into the Machine Detail experience.
-
-flowchart TD
-A["Engineer selects machine"] --> B["Current machine context"]
-B --> C["ML + anomaly information"]
-C --> D["Fresh RAG retrieval"]
-D --> E["Engineer question"]
-E --> F["AI Copilot"]
-F --> G["Grounded response"]
-G --> H["Engineer decision"]
-
-🛡️ AI Safety & Guardrails
-
-Implemented protections include:
-
-Input
-
-Question validation
-
-Question length limits
-
-Conversation history limits
-
-Message validation
-
-Control-character sanitization
-
-Prompt-injection detection
-
-API
-
-CORS restrictions
-
-Request payload limits
-
-Rate limiting
-
-Global error handling
-
-Safe API error messages
-
-AI Output
-
-Structured response validation
-
-Required-field validation
-
-Data-type validation
-
-Response length limits
-
-Evidence validation
-
-Recommendation validation
-
-Source validation
-
-RAG
-
-Retrieved engineering documents are explicitly treated as untrusted reference data and cannot override system instructions.
-
-📝 Work Orders
-
-AI does not automatically create work orders.
-
-flowchart LR
-A["Machine Risk"] --> B["AI Diagnosis"]
-B --> C["Maintenance Recommendation"]
-C --> D["Engineer Review"]
-D --> E["Create Work Order"]
-E --> F["Maintenance Execution"]
-
-🤖 Agentic Maintenance Roadmap
-
-The next major evolution is the ProDiag Maintenance Agent.
-
-The existing AI Maintenance Copilot will evolve into an agentic maintenance decision layer.
-
-flowchart TB
-A["🤖 ProDiag Maintenance Agent"]
-A --> B["🔍 Diagnosis"]
-A --> C["🔧 Maintenance Planning"]
-A --> D["📦 Spare Parts"]
-A --> E["💰 Cost Estimation"]
-A --> F["🛠️ Preventive Maintenance"]
-A --> G["📅 PM Scheduling"]
-A --> H["📝 Work Order Proposal"]
-
-    B --> I["👨‍🔧 Engineer Approval"]
-    C --> I
-    D --> I
-    E --> I
-    F --> I
-    G --> I
-    H --> I
-    I --> J["Maintenance Execution"]
-
-Planned capabilities
-
-Diagnostic reasoning
-
-Maintenance planning
-
-Spare-parts recommendation
-
-Maintenance cost estimation
-
-Preventive maintenance planning
-
-PM scheduling
-
-Work-order proposal generation
-
-Engineer approval workflow
-
-🧑‍🔧 Human-in-the-Loop
-
-ProDiag is designed as a decision-support system, not an autonomous machine-control system.
-
-flowchart LR
-A["AI Analysis"] --> B["Recommendation"]
-B --> C["👨‍🔧 Engineer Review"]
-C -->|Approve| D["Work Order / PM"]
-C -->|Reject / Modify| E["Engineer Decision"]
-E --> D
-
-🖥️ Application Routes
-
-/ Fleet Dashboard
-/machines/:machineId Machine Detail
-/alerts Alerts
-/work-orders Work Orders
-
-🧰 Technology Stack
-
-Frontend
-
-React · TypeScript · Vite · Tailwind CSS · Recharts
-
-Backend
-
-Python · Flask · Flask-CORS · Flask-Limiter · SQLAlchemy
-
-Industrial IoT
-
-MQTT · Mosquitto · Paho MQTT
-
-Machine Learning
-
-NumPy · Pandas · scikit-learn · XGBoost · Joblib
-
-AI
-
-OpenAI · LlamaIndex · Pinecone
-
-Scheduling
-
-APScheduler
-
-Testing
-
-pytest
-
-Deployment
-
-Vercel · Render
-
-📁 Project Structure
-
-ProdiagAI-v2/
-├── backend/
-│ ├── app.py
-│ ├── database.py
-│ ├── machine_config.py
-│ └── services/
-│ ├── ai_diagnosis_service.py
-│ ├── anomaly_service.py
-│ ├── alert_service.py
-│ ├── copilot_service.py
-│ ├── fault_event_service.py
-│ ├── health_service.py
-│ ├── ml_feature_service.py
-│ ├── ml_prediction_service.py
-│ ├── pinecone_service.py
-│ ├── rag_ingestion_service.py
-│ ├── rag_retrieval_service.py
-│ ├── security_service.py
-│ └── work_order_service.py
-├── frontend/
-├── simulator/
-│ ├── plc_simulator.py
-│ └── fault_profiles.py
-├── ml/
-│ ├── training/
-│ ├── models/
-│ └── evaluation/
-├── knowledge-base/
-│ ├── maintenance_manuals/
-│ ├── fault_codes/
-│ ├── bearing_failure_modes/
-│ ├── maintenance_sop/
-│ ├── spare_parts/
-│ ├── industry_standards/
-│ └── historical_faults/
-├── .env
-├── .gitignore
-├── requirements.txt
-└── README.md
-
-⚙️ Local Setup
-
-python -m venv venv
-venv\Scriptsctivate
-pip install -r requirements.txt
-
-Create .env with your OpenAI and Pinecone configuration.
-
-Run backend
-
-python backendpp.py
-
-Backend:
-
-http://127.0.0.1:5000
-
-Run frontend
-
-cd frontend
-npm install
-npm run dev
-
-Frontend:
-
-http://localhost:5173
-
-Run PLC simulator
-
-From the project root:
-
-python simulator\plc_simulator.py
-
-🔐 Environment Variables
-
-OPENAI_API_KEY=your_openai_api_key
-PINECONE_API_KEY=your_pinecone_api_key
-
-PINECONE_INDEX_NAME=prodiag-ai
-PINECONE_NAMESPACE=prodiag
-PINECONE_CLOUD=aws
-PINECONE_REGION=us-east-1
-
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-
-SECRET_KEY=
-ALLOWED_ORIGINS=
-INGEST=false
-
-⚠️ Never commit real API keys to Git.
-
-🧪 Testing
-
-python -m py_compile backendpp.py
-python -m py_compile backend\services\security_service.py
-pytest
-
-📊 Evaluation
-
-ML
-
-F1-score · Precision · Recall · Confusion Matrix · Threshold Analysis · MAE · RMSE · R²
-
-RAG
-
-Retrieval similarity · Source relevance · Engineering knowledge grounding
-
-LLM / Copilot
-
-Response validity · Grounding · Evidence consistency · Recommendation usefulness · Safety · Prompt-injection resistance · Conversation consistency · Error handling
-
-Evaluation artifacts are stored under:
-
-ml/evaluation/
-
-☁️ Deployment Architecture
-
-flowchart TB
-U["🌐 User"] --> V["▲ Vercel<br/>React Frontend"]
-V -->|HTTPS API| R["⚡ Render<br/>Flask Backend"]
-R --> O["OpenAI"]
-R --> P["Pinecone"]
-R --> DB["Production Database"]
-
-Frontend
-
-Vercel → React + Vite
-
-Backend
-
-Render → Flask API
-
-Production CORS
-
-ALLOWED_ORIGINS=https://your-frontend-domain.com
-
-🔌 API Overview
-
-Machines
-
-GET /api/machines
-GET /api/machines/<machine_id>
-GET /api/machines/<machine_id>/ai-diagnosis
-
-Engineer Copilot
-
-POST /api/machines/<machine_id>/ai-diagnosis/chat
-
-Alerts
-
-GET /api/alerts
-
-Work Orders
-
-GET /api/work-orders
-POST /api/work-orders
-
-RAG
-
-GET /api/rag/search
-
-📈 Current Project Status
-
-Component
-
-Status
-
-Industrial IoT
-
-✅
-
-20-Machine Fleet
-
-✅
-
-MQTT Telemetry
-
-✅
-
-Machine Health
-
-✅
-
-ML Failure Prediction
-
-✅
-
-ML Health Score
-
-✅
-
-Anomaly Detection
-
-✅
-
-Alerts
-
-✅
-
-Fault Event Tracking
-
-✅
-
-RAG Knowledge Base
-
-✅
-
-Pinecone Retrieval
-
-✅
-
+```text
+Machine Risk
+     ↓
 AI Diagnosis
+     ↓
+Maintenance Recommendation
+     ↓
+Engineer Review
+     ↓
+Engineer Decision
+     ↓
+Work Order / Maintenance Action
+```
 
-✅
+The AI recommends. **The engineer decides.**
 
-Engineer Copilot
+---
 
-✅
+## 🛡️ AI Safety & Security
 
-Work Orders
+Implemented controls include:
 
-✅
+**Input**
 
-AI Guardrails
+- Question validation
+- Length limits
+- Conversation-history limits
+- Message validation
+- Control-character sanitisation
+- Prompt-injection detection
 
-✅
+**API**
 
-ML Evaluation
+- CORS restrictions
+- Payload limits
+- Rate limiting
+- Global error handling
+- Safe API error messages
 
-✅
+**AI Output**
 
-Application Evaluation
+- Structured response validation
+- Required-field validation
+- Data-type validation
+- Response-length limits
+- Evidence validation
+- Recommendation validation
+- Source validation
 
-🔄
+**RAG**
 
-End-to-End Validation
+- Retrieved engineering documents are treated as untrusted reference data and cannot override system instructions.
 
-🔄
+---
 
-Production Deployment
+## 🏗️ Architecture
 
-🔄
+```text
+Industrial Sensors / PLC / Simulator
+              │
+              ▼
+        MQTT / IIoT
+              │
+              ▼
+       ProDiag Flask API
+              │
+     ┌────────┼─────────┐
+     ▼        ▼         ▼
+    ML     Anomaly     Alerts
+     │        │         │
+     └────────┼─────────┘
+              ▼
+       AI Diagnosis
+              │
+       RAG + OpenAI
+              │
+              ▼
+      Engineer Copilot
+              │
+              ▼
+      Engineer Approval
+              │
+              ▼
+         Work Order
+```
 
-Agentic Maintenance Layer
+---
 
-🚀 Next
+## ☁️ Deployment
 
-🗺️ Development Roadmap
+Current web deployment:
 
-timeline
-title ProDiag AI V2 Roadmap
+```text
+User
+ ↓
+Vercel
+React + Vite
+ ↓ HTTPS API
+Render
+Flask Backend
+ ↓
+OpenAI / Pinecone / Database
+```
 
-    section Foundation
-        Industrial IoT : MQTT / PLC Simulator
-        Fleet Monitoring : Machine Health
-        ML : Failure Prediction
-        Anomaly Detection : Alerts
+Industrial telemetry is demonstrated through a PLC/sensor simulator connected through MQTT.
 
-    section AI
-        RAG : Engineering Knowledge
-        AI Diagnosis : Evidence-based Diagnosis
-        Engineer Copilot : Conversational Support
+### 🔗 Links
 
-    section Reliability
-        Evaluation : ML / RAG / LLM
-        Guardrails : Security / Validation
-        End-to-End Testing : System Validation
+- **Live Product:** https://prodiagai.vercel.app
+- **GitHub:** https://github.com/NipunKavinda95/ProDiagAI_v2
 
-    section Agentic
-        Maintenance Agent : Diagnosis + Tools
-        Maintenance Planning : Action Plans
-        Spare Parts : Parts Recommendation
-        Cost Estimation : Maintenance Cost
-        Preventive Maintenance : PM Planning
-        PM Scheduling : Maintenance Windows
-        Work Order Agent : Engineer Approval
+---
 
-    section Deployment
-        Vercel : Frontend
-        Render : Backend
-        Production Database : Scalable Storage
+## 🧰 Technology Stack
 
-🎯 Final Product Direction
+**Frontend:** React · TypeScript · Vite · Tailwind CSS · Recharts
 
-flowchart TB
-A["🏭 Industrial Asset"] --> B["📡 Telemetry"]
-B --> C["🧠 ML + Anomaly Detection"]
-C --> D["🚨 Risk / Alert"]
-D --> E["🤖 ProDiag Maintenance Agent"]
+**Backend:** Python · Flask · Flask-CORS · Flask-Limiter · SQLAlchemy
 
-    E --> F["🔍 Diagnose"]
-    E --> G["🔧 Plan"]
-    E --> H["📚 Retrieve"]
-    E --> I["📦 Spare Parts"]
-    E --> J["💰 Cost Estimate"]
-    E --> K["🛠️ PM Recommendation"]
-    E --> L["📅 PM Schedule"]
+**Industrial IoT:** MQTT · Paho MQTT · Mosquitto
 
-    F --> M["👨‍🔧 Engineer Approval"]
-    G --> M
-    H --> M
-    I --> M
-    J --> M
-    K --> M
-    L --> M
+**Machine Learning:** NumPy · Pandas · scikit-learn · XGBoost · Joblib
 
-    M --> N["📝 Work Order"]
-    N --> O["Maintenance Execution"]
+**AI / RAG:** OpenAI · LlamaIndex · Pinecone
 
-💡 Core Principle
+**Scheduling:** APScheduler
 
-AI should help engineers make better maintenance decisions — not replace engineering responsibility.
+**Testing:** pytest
 
-ProDiag AI V2 combines machine data, predictive analytics, engineering knowledge, AI reasoning, and agentic automation to create a practical path from:
+**Deployment:** Vercel · Render
 
-Prediction → Diagnosis → Planning → Maintenance Action
+---
 
-⚙️ ProDiag AI V2
+## 🏭 Demonstration Environment
 
-Agentic Predictive Maintenance Copilot for Industrial Assets
+The current demonstration contains **20 simulated industrial machines** with independent conditions and progressive fault behaviour.
 
-Industrial IoT · Machine Learning · RAG · AI · Agentic Automation
+Supported simulated conditions include:
+
+- Healthy
+- Degrading
+- Warning
+- Critical
+- Faulted
+- Repairing
+- Restart
+
+Simulated fault types:
+
+- Bearing wear
+- Cavitation
+- Overload
+- Belt misalignment
+- Fan imbalance
+- Gear wear
+
+In a real-world deployment, the simulator can be replaced by **physical PLCs, sensors or industrial edge gateways**.
+
+---
+
+## 📊 Project Status
+
+| Component                 |   Status   |
+| ------------------------- | :--------: |
+| Industrial IoT            |     ✅     |
+| 20-Machine Fleet          |     ✅     |
+| MQTT Telemetry            |     ✅     |
+| Machine Health            |     ✅     |
+| ML Failure Prediction     |     ✅     |
+| ML Health Score           |     ✅     |
+| Anomaly Detection         |     ✅     |
+| Alerts                    |     ✅     |
+| Fault Event Tracking      |     ✅     |
+| RAG Knowledge Base        |     ✅     |
+| Pinecone Retrieval        |     ✅     |
+| AI Diagnosis              |     ✅     |
+| Engineer Copilot          |     ✅     |
+| Work Orders               |     ✅     |
+| AI Guardrails             |     ✅     |
+| ML Evaluation             |     ✅     |
+| Application Evaluation    |     🔄     |
+| End-to-End Validation     |     🔄     |
+| Agentic Maintenance Layer | 🚀 Roadmap |
+
+---
+
+## 🚀 Future Vision — Agentic Maintenance
+
+The next evolution is the **ProDiag Maintenance Agent**.
+
+```text
+             🤖 ProDiag Maintenance Agent
+                         │
+       ┌─────────┬───────┼────────┬─────────┐
+       ▼         ▼       ▼        ▼         ▼
+   Diagnose    Plan    Parts    Cost       PM
+       └─────────┴───────┴────────┴─────────┘
+                         ↓
+                 👨‍🔧 Engineer Approval
+                         ↓
+                    📝 Work Order
+                         ↓
+                Maintenance Execution
+```
+
+Planned capabilities:
+
+- Diagnostic reasoning
+- Maintenance planning
+- Spare-parts recommendation
+- Maintenance cost estimation
+- Preventive maintenance planning
+- PM scheduling
+- Work-order proposal generation
+- Engineer approval workflow
+- Real industrial equipment integration
+- Enterprise maintenance-system integration
+
+---
+
+## 🎯 Product Vision
+
+**Prediction → Diagnosis → Planning → Maintenance Action**
+
+ProDiag AI aims to evolve from predictive machine intelligence into an intelligent maintenance decision layer.
+
+> **See the machine condition. Understand the risk. Recommend the next action. Let the engineer decide. Keep production moving.**
+
+---
+
+## 👨‍💻 Built By
+
+### Nipun Kavinda
+
+**Industrial AI & Engineering Automation**
+
+**Founder / Developer — NIKSOFT AI**
+
+ProDiag AI V2 combines engineering knowledge with Industrial IoT, Machine Learning, RAG, AI reasoning and intelligent automation.
+
+---
+
+<div align="center">
+
+### ⚙️ ProDiag AI V2
+
+**Predict Before Failure. Act Before Downtime.**
+
+**Built by NIKSOFT AI**
+
+</div>
