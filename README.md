@@ -105,55 +105,43 @@ toward:
 
 ## 📸 Product Screenshots
 
-Create a folder:
-
-```text
-docs/screenshots/
-```
-
-and add these screenshots:
+The following screenshots showcase the main capabilities of ProDiag AI V2.
 
 ### Fleet Dashboard
 
-```markdown
 ![Fleet Dashboard](docs/screenshots/fleet-dashboard.png)
-```
 
-Shows the 20-machine fleet, health distribution and equipment categories.
+Overview of the 20-machine fleet, machine health distribution, equipment categories, and current operating status.
 
 ### Machine Detail
 
-```markdown
 ![Machine Detail](docs/screenshots/machine-detail.png)
-```
 
-Shows individual machine health, prediction and maintenance intelligence.
+Detailed view of an individual machine, including health status, sensor conditions, predictive insights, and maintenance intelligence.
 
 ### Analytics
 
-```markdown
 ![Analytics](docs/screenshots/analytics.png)
-```
 
-Shows sensor trends, machine condition patterns and predictive health insights.
+Visualizes sensor trends, machine condition patterns, health indicators, and predictive maintenance insights.
 
 ### AI Diagnosis
 
-```markdow
 ![AI Diagnosis](docs/screenshots/ai-diagnosis.png)
-```
 
-Shows AI-assisted fault analysis, evidence and recommended maintenance actions.
-
-Shows warnings, critical events and machine-condition changes.
+Provides AI-assisted fault analysis, supporting evidence, diagnosis confidence, and recommended maintenance actions.
 
 ### Engineer Copilot
 
-```markdown
 ![Engineer Copilot](docs/screenshots/co-pilot.png)
-```
 
-Shows AI-assisted maintenance investigation.
+Interactive AI assistance for investigating machine conditions and supporting maintenance decision-making.
+
+### Work Orders
+
+![Work Orders](docs/screenshots/work-orders.png)
+
+Converts approved maintenance recommendations into structured work orders for execution and tracking.
 
 ### Work Orders
 
@@ -162,8 +150,6 @@ Shows AI-assisted maintenance investigation.
 ```
 
 Shows engineer-approved maintenance actions.
-
-> **Tip:** Use the real screenshots from the deployed Vercel application. This makes the GitHub page look like a professional product showcase rather than a code repository.
 
 ---
 
